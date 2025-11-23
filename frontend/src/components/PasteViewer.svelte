@@ -14,8 +14,11 @@
   let history = []
   let showHistory = false
   let showHtmlSource = false
-  let container
+  let showMarkdownSource = false
+  let htmlContainer
+  let markdownContainer
   let htmlEditor
+  let markdownEditor
 
   async function loadPaste(id) {
     if (!id) return
@@ -92,7 +95,7 @@
   }
 
   // Initialize Monaco editor for HTML source view
-  $: if (showHtmlSource && container && processed?.html && !htmlEditor) {
+  $: if (showHtmlSource && htmlContainer && processed?.html && !htmlEditor) {
     import('monaco-editor').then(monaco => {
       // Setup Monaco environment
       self.MonacoEnvironment = {
@@ -105,7 +108,7 @@
       }
 
       try {
-        htmlEditor = monaco.editor.create(container, {
+        htmlEditor = monaco.editor.create(htmlContainer, {
           value: processed.html,
           language: 'html',
           readOnly: true,
@@ -126,6 +129,41 @@
     })
   }
 
+  // Initialize Monaco editor for Markdown source view
+  $: if (showMarkdownSource && markdownContainer && processed?.preview && !markdownEditor) {
+    import('monaco-editor').then(monaco => {
+      // Setup Monaco environment
+      self.MonacoEnvironment = {
+        getWorker: () => {
+          return {
+            postMessage: () => {},
+            terminate: () => {}
+          }
+        }
+      }
+
+      try {
+        markdownEditor = monaco.editor.create(markdownContainer, {
+          value: processed.preview,
+          language: 'markdown',
+          readOnly: true,
+          theme: 'vs',
+          automaticLayout: true,
+          minimap: { enabled: false },
+          scrollBeyondLastLine: false,
+          wordWrap: 'on',
+          lineNumbers: 'on',
+          fontSize: 13,
+          fontFamily: '"Courier New", monospace',
+          padding: { top: 16, bottom: 16 }
+        })
+        console.log('Markdown source editor created successfully')
+      } catch (e) {
+        console.error('Failed to create Markdown source editor:', e)
+      }
+    })
+  }
+
   // Update editor content when HTML changes
   $: if (htmlEditor && processed?.html) {
     const currentValue = htmlEditor.getValue()
@@ -134,10 +172,24 @@
     }
   }
 
-  // Clean up editor when switching away from HTML source view
+  // Update editor content when Markdown changes
+  $: if (markdownEditor && processed?.preview) {
+    const currentValue = markdownEditor.getValue()
+    if (currentValue !== processed.preview) {
+      markdownEditor.setValue(processed.preview)
+    }
+  }
+
+  // Clean up HTML editor when switching away from HTML source view
   $: if (!showHtmlSource && htmlEditor) {
     htmlEditor.dispose()
     htmlEditor = null
+  }
+
+  // Clean up Markdown editor when switching away from Markdown source view
+  $: if (!showMarkdownSource && markdownEditor) {
+    markdownEditor.dispose()
+    markdownEditor = null
   }
 
   // Cleanup on component destroy
@@ -145,6 +197,9 @@
     return () => {
       if (htmlEditor) {
         htmlEditor.dispose()
+      }
+      if (markdownEditor) {
+        markdownEditor.dispose()
       }
     }
   })
@@ -231,8 +286,50 @@
     <!-- Content -->
     {#if processed}
       {#if processed.type === 'markdown'}
-        <div class="bg-white shadow-sm rounded-lg border border-gray-200 mb-6 p-6 prose prose-sm max-w-none">
-          {@html processed.html}
+        <div class="bg-white shadow-sm rounded-lg border border-gray-200 mb-6 p-6">
+          <!-- Header with toggle -->
+          <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+              <i class="fas fa-file-alt text-blue-600 mr-2"></i>
+              Markdown Content
+            </h3>
+            <div class="flex items-center gap-2">
+              <!-- Preview Button -->
+              <button
+                type="button"
+                on:click={() => showMarkdownSource = false}
+                class="p-2 rounded transition-colors {showMarkdownSource ? 'bg-gray-100 text-gray-600' : 'bg-blue-100 text-blue-600 hover:bg-blue-200'}"
+                title="Rendered preview"
+              >
+                <i class="fas fa-eye"></i>
+              </button>
+
+              <!-- Code Button -->
+              <button
+                type="button"
+                on:click={() => showMarkdownSource = true}
+                class="p-2 rounded transition-colors {showMarkdownSource ? 'bg-blue-100 text-blue-600 hover:bg-blue-200' : 'bg-gray-100 text-gray-600'}"
+                title="Source code"
+              >
+                <i class="fas fa-code"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Markdown Content Container -->
+          <div class="border border-gray-200 rounded-lg overflow-hidden">
+            {#if !showMarkdownSource}
+              <!-- Rendered Markdown - natural height -->
+              <div class="p-6 prose prose-sm max-w-none">
+                {@html processed.html}
+              </div>
+            {:else}
+              <!-- Markdown Source Editor - fixed height for editor -->
+              <div style="height: calc(100vh - 400px);">
+                <div bind:this={markdownContainer} style="height: 100%; width: 100%;" class="monaco-container"></div>
+              </div>
+            {/if}
+          </div>
         </div>
       {:else if processed.type === 'html'}
         <div class="bg-white shadow-sm rounded-lg border border-gray-200 mb-6 p-6">
@@ -277,7 +374,7 @@
               ></iframe>
             {:else}
               <!-- HTML Source Editor - directly use Monaco without extra wrapper -->
-              <div bind:this={container} style="height: 100%; width: 100%;" class="monaco-container"></div>
+              <div bind:this={htmlContainer} style="height: 100%; width: 100%;" class="monaco-container"></div>
             {/if}
           </div>
         </div>
