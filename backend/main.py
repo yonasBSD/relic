@@ -36,7 +36,7 @@ app.add_middleware(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origins=settings.get_allowed_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -115,7 +115,7 @@ async def create_paste(
             access_level=access_level,
             created_at=datetime.utcnow(),
             expires_at=expires_at,
-            metadata={"processed_metadata": metadata, "preview": preview}
+            processing_metadata={"processed_metadata": metadata, "preview": preview}
         )
 
         db.add(paste)
@@ -240,7 +240,7 @@ async def edit_paste(
             version_number=parent.version_number + 1,
             access_level=parent.access_level,
             expires_at=parent.expires_at,
-            metadata={"processed_metadata": metadata, "preview": preview}
+            processing_metadata={"processed_metadata": metadata, "preview": preview}
         )
 
         db.add(new_paste)
@@ -313,7 +313,7 @@ async def fork_paste(
             root_id=new_id,  # Fork creates new root
             version_number=1,  # Reset to version 1
             access_level=original.access_level,
-            metadata={"processed_metadata": metadata, "preview": preview}
+            processing_metadata={"processed_metadata": metadata, "preview": preview}
         )
 
         db.add(fork)

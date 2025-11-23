@@ -28,6 +28,13 @@
   function handleEdit() {
     showToast('Edit functionality would be implemented here', 'info')
   }
+
+  function handleNavigateToPaste(e) {
+    e.preventDefault()
+    window.history.pushState({}, '', `/${paste.id}`)
+    // Trigger a popstate event to notify App component
+    window.dispatchEvent(new PopStateEvent('popstate', {}))
+  }
 </script>
 
 <div class="p-6 hover:bg-gray-50 transition-colors">
@@ -35,7 +42,7 @@
     <div class="flex-1 min-w-0">
       <div class="flex items-center space-x-2 mb-2">
         <h3 class="text-sm font-medium text-gray-900 truncate">
-          <a href="/{paste.id}" class="hover:text-blue-600 transition-colors">
+          <a href="/{paste.id}" on:click={handleNavigateToPaste} class="hover:text-blue-600 transition-colors">
             {paste.name || 'Untitled'}
           </a>
         </h3>

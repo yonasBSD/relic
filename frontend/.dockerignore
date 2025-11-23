@@ -1,0 +1,16 @@
+node_modules/
+npm-debug.log
+yarn-error.log
+dist/
+build/
+.git
+.env.local
+.env.*.local
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+coverage/
+.eslintcache

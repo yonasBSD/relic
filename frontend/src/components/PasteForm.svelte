@@ -22,16 +22,33 @@
     isLoading = true
 
     try {
-      const response = await createPaste({
-        name: title || 'Untitled',
-        content_type: 'text/plain',
-        language_hint: syntax === 'auto' ? null : syntax,
-        access_level: visibility,
-        expires_in: expiry === 'never' ? null : expiry,
-        tags: []
+      // Create a File object from the content
+      const blob = new Blob([content], { type: 'text/plain' })
+      const file = new File([blob], title || 'paste.txt', { type: 'text/plain' })
+
+      // Create FormData and append the file
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('name', title || 'Untitled')
+      formData.append('language_hint', syntax === 'auto' ? '' : syntax)
+      formData.append('access_level', visibility)
+      if (expiry !== 'never') {
+        formData.append('expires_in', expiry)
+      }
+
+      // Use axios directly for FormData
+      const response = await fetch('/api/v1/pastes', {
+        method: 'POST',
+        body: formData
       })
 
-      const pasteUrl = `${window.location.origin}/${response.data.id}`
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.detail || 'Failed to create paste')
+      }
+
+      const data = await response.json()
+      const pasteUrl = `${window.location.origin}/${data.id}`
       showToast('Paste created successfully!', 'success')
 
       // Copy to clipboard
@@ -47,7 +64,7 @@
       visibility = 'public'
       password = ''
     } catch (error) {
-      showToast(error.response?.data?.detail || 'Failed to create paste', 'error')
+      showToast(error.message || 'Failed to create paste', 'error')
       console.error('Error creating paste:', error)
     } finally {
       isLoading = false

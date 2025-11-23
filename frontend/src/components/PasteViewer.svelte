@@ -1,37 +1,68 @@
 <script>
   import { onMount } from 'svelte'
   import { getPaste, getPasteRaw, getPasteHistory } from '../services/api'
+  import { processContent } from '../services/processors'
   import { showToast } from '../stores/toastStore'
+  import MonacoEditor from './MonacoEditor.svelte'
 
   export let pasteId = ''
 
   let paste = null
-  let content = ''
+  let processed = null
   let loading = true
   let history = []
   let showHistory = false
 
-  onMount(async () => {
+  async function loadPaste(id) {
+    if (!id) return
+    loading = true
+    paste = null
+    processed = null
+    history = []
+
+    console.log('[PasteViewer] Loading paste:', id)
+
     try {
-      const pasteResponse = await getPaste(pasteId)
+      console.log('[PasteViewer] Fetching paste metadata...')
+      const pasteResponse = await getPaste(id)
+      console.log('[PasteViewer] Paste metadata received:', pasteResponse.data)
       paste = pasteResponse.data
 
-      // For text content, fetch raw
-      if (paste.content_type.startsWith('text/')) {
-        const rawResponse = await getPasteRaw(pasteId)
-        content = new TextDecoder().decode(rawResponse.data)
-      }
+      // Fetch and process raw content
+      console.log('[PasteViewer] Fetching raw content...')
+      const rawResponse = await getPasteRaw(id)
+      const content = await rawResponse.data.arrayBuffer()
+      console.log('[PasteViewer] Raw content received, processing...')
+
+      processed = processContent(
+        new Uint8Array(content),
+        paste.content_type,
+        paste.language_hint
+      )
+      console.log('[PasteViewer] Content processed:', processed)
 
       // Load history if this is part of a version chain
       if (paste.root_id) {
-        const historyResponse = await getPasteHistory(pasteId)
+        console.log('[PasteViewer] Loading history...')
+        const historyResponse = await getPasteHistory(id)
         history = historyResponse.data.versions
       }
+      console.log('[PasteViewer] Paste loaded successfully')
     } catch (error) {
-      showToast('Failed to load paste', 'error')
-      console.error('Error loading paste:', error)
+      console.error('[PasteViewer] Error loading paste:', error)
+      showToast('Failed to load paste: ' + error.message, 'error')
     } finally {
       loading = false
+    }
+  }
+
+  $: if (pasteId) {
+    loadPaste(pasteId)
+  }
+
+  onMount(() => {
+    if (pasteId) {
+      loadPaste(pasteId)
     }
   })
 
@@ -56,6 +87,13 @@
     }
 
     return `${size.toFixed(2)} ${units[unitIndex]}`
+  }
+
+  function navigateToPaste(newId) {
+    window.history.pushState({}, '', `/${newId}`)
+    window.dispatchEvent(new PopStateEvent('popstate', {}))
+    // Update current paste ID
+    pasteId = newId
   }
 </script>
 
@@ -107,25 +145,72 @@
     </div>
 
     <!-- Content -->
-    {#if paste.content_type.startsWith('text/')}
-      <div class="bg-white shadow-sm rounded-lg border border-gray-200 mb-6 overflow-hidden">
-        <pre class="p-6 bg-gray-900 text-gray-100 font-mono text-sm overflow-x-auto"><code>{content}</code></pre>
-      </div>
-    {:else if paste.content_type.startsWith('image/')}
-      <div class="bg-white shadow-sm rounded-lg border border-gray-200 mb-6 p-6">
-        <img src="/{pasteId}/raw" alt={paste.name} class="max-w-full h-auto rounded" />
-      </div>
+    {#if processed}
+      {#if processed.type === 'code'}
+        <MonacoEditor
+          value={processed.preview || ''}
+          language={processed.metadata?.language || 'plaintext'}
+          readOnly={true}
+          height="calc(100vh - 300px)"
+        />
+      {:else if processed.type === 'text'}
+        <MonacoEditor
+          value={processed.preview || ''}
+          language="plaintext"
+          readOnly={true}
+          height="calc(100vh - 300px)"
+        />
+        {#if processed.truncated}
+          <div class="bg-blue-50 border-t border-gray-200 px-6 py-4 text-center text-sm text-blue-700 mb-6 rounded-b-lg">
+            Content truncated. <a href="/{pasteId}/raw" class="font-semibold hover:underline">Download full file</a>
+          </div>
+        {/if}
+      {:else if processed.type === 'image'}
+        <div class="bg-white shadow-sm rounded-lg border border-gray-200 mb-6 p-6">
+          <img src={processed.url} alt={paste.name} class="max-w-full h-auto rounded" />
+        </div>
+      {:else if processed.type === 'csv'}
+        <div class="bg-white shadow-sm rounded-lg border border-gray-200 mb-6 p-6">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="border-b border-gray-200">
+                  <th class="px-4 py-2 text-left font-semibold text-gray-900">Row</th>
+                  {#each processed.metadata.columns as col}
+                    <th class="px-4 py-2 text-left font-semibold text-gray-900">{col}</th>
+                  {/each}
+                </tr>
+              </thead>
+              <tbody>
+                {#each processed.rows as row, idx}
+                  <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="px-4 py-2 text-gray-600">{idx + 1}</td>
+                    {#each processed.metadata.columns as col}
+                      <td class="px-4 py-2 text-gray-900">{row[col] || ''}</td>
+                    {/each}
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {:else}
+        <div class="bg-white shadow-sm rounded-lg border border-gray-200 mb-6 p-6 text-center">
+          <i class="fas fa-file text-gray-400 text-6xl mb-4"></i>
+          <p class="text-gray-600 mb-4">Preview not available for this file type</p>
+          <button
+            on:click={downloadPaste}
+            class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            <i class="fas fa-download mr-2"></i>
+            Download File
+          </button>
+        </div>
+      {/if}
     {:else}
       <div class="bg-white shadow-sm rounded-lg border border-gray-200 mb-6 p-6 text-center">
         <i class="fas fa-file text-gray-400 text-6xl mb-4"></i>
-        <p class="text-gray-600 mb-4">Binary file preview not available</p>
-        <button
-          on:click={downloadPaste}
-          class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-        >
-          <i class="fas fa-download mr-2"></i>
-          Download File
-        </button>
+        <p class="text-gray-600">Loading preview...</p>
       </div>
     {/if}
 
@@ -145,7 +230,10 @@
         {#if showHistory}
           <div class="divide-y divide-gray-200">
             {#each history as version (version.id)}
-              <a href="/{version.id}" class="p-4 hover:bg-gray-50 transition-colors block">
+              <button
+                on:click={() => navigateToPaste(version.id)}
+                class="w-full p-4 hover:bg-gray-50 transition-colors block text-left border-0 bg-transparent cursor-pointer"
+              >
                 <div class="flex items-center justify-between">
                   <div>
                     <span class="font-medium text-gray-900">v{version.version}</span>
@@ -153,7 +241,7 @@
                   </div>
                   <span class="text-sm text-gray-500">{new Date(version.created_at).toLocaleString()}</span>
                 </div>
-              </a>
+              </button>
             {/each}
           </div>
         {/if}

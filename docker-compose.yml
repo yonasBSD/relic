@@ -1,8 +1,72 @@
 version: '3.8'
 
 services:
+  # Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: cloudpaste-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - cloudpaste
+
+  # Backend API Service
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: cloudpaste-backend
+    expose:
+      - "8000"
+    environment:
+      DATABASE_URL: postgresql://paste_user:paste_password@postgres:5432/paste_db
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: pastes
+      MINIO_USE_SSL: "false"
+      DEBUG: "true"
+      ALLOWED_ORIGINS: "http://localhost:5173,http://localhost:3000"
+    volumes:
+      - ./backend:/app/backend:z
+      - ./requirements.txt:/app/requirements.txt:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - cloudpaste
+
+  # Frontend Development Server
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cloudpaste-frontend
+    expose:
+      - "5173"
+    volumes:
+      - ./frontend:/app:z
+      - /app/node_modules
+    environment:
+      VITE_API_URL: http://localhost
+    depends_on:
+      - backend
+    command: npm run dev -- --host 0.0.0.0
+    networks:
+      - cloudpaste
+
+  # MinIO Object Storage
   minio:
     image: minio/minio:latest
+    container_name: cloudpaste-minio
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -14,12 +78,16 @@ services:
       - minio_data:/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 20s
-      retries: 3
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cloudpaste
 
+  # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
+    container_name: cloudpaste-postgres
     ports:
       - "5432:5432"
     environment:
@@ -33,7 +101,13 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - cloudpaste
 
 volumes:
   minio_data:
   postgres_data:
+
+networks:
+  cloudpaste:
+    driver: bridge

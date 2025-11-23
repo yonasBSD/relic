@@ -81,11 +81,11 @@ class PasteResponse(BaseModel):
     expires_at: Optional[datetime]
     deleted_at: Optional[datetime]
     access_count: int
-    metadata: dict = {}
     tags: List[TagResponse] = []
 
     class Config:
         from_attributes = True
+        extra = "ignore"
 
 
 class PasteListResponse(BaseModel):

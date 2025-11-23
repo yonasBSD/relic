@@ -65,7 +65,7 @@ class Paste(Base):
     access_count = Column(Integer, default=0)
 
     # Processing metadata (stored as JSON for flexibility)
-    metadata = Column(JSON, default={})
+    processing_metadata = Column(JSON, default={})
 
     # Relationships
     user = relationship("User", back_populates="pastes")
