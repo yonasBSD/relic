@@ -146,7 +146,11 @@
 
     <!-- Content -->
     {#if processed}
-      {#if processed.type === 'code'}
+      {#if processed.type === 'markdown'}
+        <div class="bg-white shadow-sm rounded-lg border border-gray-200 mb-6 p-6 prose prose-sm max-w-none">
+          {@html processed.html}
+        </div>
+      {:else if processed.type === 'code'}
         <MonacoEditor
           value={processed.preview || ''}
           language={processed.metadata?.language || 'plaintext'}

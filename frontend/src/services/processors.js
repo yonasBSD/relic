@@ -4,6 +4,21 @@
  */
 
 import hljs from 'highlight.js'
+import MarkdownIt from 'markdown-it'
+
+const md = new MarkdownIt({
+  html: true,
+  linkify: true,
+  typographer: true,
+  highlight: function (str, lang) {
+    if (lang && hljs.getLanguage(lang)) {
+      try {
+        return hljs.highlight(str, { language: lang, ignoreIllegals: true }).value
+      } catch (__) {}
+    }
+    return '' // use external default escaping
+  }
+})
 
 /**
  * Detect programming language from content
@@ -91,6 +106,24 @@ export function processImage(content) {
 }
 
 /**
+ * Process markdown content
+ */
+export function processMarkdown(content) {
+  const text = typeof content === 'string' ? content : new TextDecoder().decode(content)
+  const html = md.render(text)
+
+  return {
+    type: 'markdown',
+    html,
+    preview: text,
+    metadata: {
+      lineCount: text.split('\n').length,
+      charCount: text.length
+    }
+  }
+}
+
+/**
  * Process CSV content
  */
 export function processCSV(content) {
@@ -122,6 +155,15 @@ export function processCSV(content) {
  */
 export function processContent(content, contentType, languageHint) {
   const contentTypeLower = contentType.toLowerCase()
+
+  // Markdown
+  if (
+    contentTypeLower.includes('markdown') ||
+    languageHint === 'markdown' ||
+    languageHint === 'md'
+  ) {
+    return processMarkdown(content)
+  }
 
   // Code files
   if (

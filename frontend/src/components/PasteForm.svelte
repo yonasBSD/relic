@@ -30,7 +30,9 @@
       const formData = new FormData()
       formData.append('file', file)
       formData.append('name', title || 'Untitled')
-      formData.append('language_hint', syntax === 'auto' ? '' : syntax)
+      if (syntax !== 'auto') {
+        formData.append('language_hint', syntax)
+      }
       formData.append('access_level', visibility)
       if (expiry !== 'never') {
         formData.append('expires_in', expiry)
