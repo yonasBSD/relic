@@ -91,13 +91,11 @@
       }
 
       const data = await response.json()
-      const pasteUrl = `${window.location.origin}/${data.id}`
+      const pasteUrl = `/${data.id}`
       showToast('Paste created successfully!', 'success')
 
-      // Copy to clipboard
-      navigator.clipboard.writeText(pasteUrl).then(() => {
-        showToast('URL copied to clipboard!', 'info')
-      })
+      // Navigate to the new paste
+      window.location.href = pasteUrl
 
       // Reset form
       title = ''
