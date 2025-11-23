@@ -13,6 +13,9 @@
   let loading = true
   let history = []
   let showHistory = false
+  let showHtmlSource = false
+  let container
+  let htmlEditor
 
   async function loadPaste(id) {
     if (!id) return
@@ -87,6 +90,64 @@
     // Update current paste ID
     pasteId = newId
   }
+
+  // Initialize Monaco editor for HTML source view
+  $: if (showHtmlSource && container && processed?.html && !htmlEditor) {
+    import('monaco-editor').then(monaco => {
+      // Setup Monaco environment
+      self.MonacoEnvironment = {
+        getWorker: () => {
+          return {
+            postMessage: () => {},
+            terminate: () => {}
+          }
+        }
+      }
+
+      try {
+        htmlEditor = monaco.editor.create(container, {
+          value: processed.html,
+          language: 'html',
+          readOnly: true,
+          theme: 'vs',
+          automaticLayout: true,
+          minimap: { enabled: false },
+          scrollBeyondLastLine: false,
+          wordWrap: 'on',
+          lineNumbers: 'on',
+          fontSize: 13,
+          fontFamily: '"Courier New", monospace',
+          padding: { top: 16, bottom: 16 }
+        })
+        console.log('HTML source editor created successfully')
+      } catch (e) {
+        console.error('Failed to create HTML source editor:', e)
+      }
+    })
+  }
+
+  // Update editor content when HTML changes
+  $: if (htmlEditor && processed?.html) {
+    const currentValue = htmlEditor.getValue()
+    if (currentValue !== processed.html) {
+      htmlEditor.setValue(processed.html)
+    }
+  }
+
+  // Clean up editor when switching away from HTML source view
+  $: if (!showHtmlSource && htmlEditor) {
+    htmlEditor.dispose()
+    htmlEditor = null
+  }
+
+  // Cleanup on component destroy
+  onMount(() => {
+    return () => {
+      if (htmlEditor) {
+        htmlEditor.dispose()
+      }
+    }
+  })
 
   </script>
 
@@ -172,6 +233,53 @@
       {#if processed.type === 'markdown'}
         <div class="bg-white shadow-sm rounded-lg border border-gray-200 mb-6 p-6 prose prose-sm max-w-none">
           {@html processed.html}
+        </div>
+      {:else if processed.type === 'html'}
+        <div class="bg-white shadow-sm rounded-lg border border-gray-200 mb-6 p-6">
+          <!-- Header with toggle -->
+          <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+              <i class="fas fa-code text-orange-600 mr-2"></i>
+              HTML Content
+            </h3>
+            <div class="flex items-center gap-2">
+              <!-- Preview Button -->
+              <button
+                type="button"
+                on:click={() => showHtmlSource = false}
+                class="p-2 rounded transition-colors {showHtmlSource ? 'bg-gray-100 text-gray-600' : 'bg-blue-100 text-blue-600 hover:bg-blue-200'}"
+                title="Rendered preview"
+              >
+                <i class="fas fa-eye"></i>
+              </button>
+
+              <!-- Code Button -->
+              <button
+                type="button"
+                on:click={() => showHtmlSource = true}
+                class="p-2 rounded transition-colors {showHtmlSource ? 'bg-blue-100 text-blue-600 hover:bg-blue-200' : 'bg-gray-100 text-gray-600'}"
+                title="Source code"
+              >
+                <i class="fas fa-code"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- HTML Content Container -->
+          <div class="border border-gray-200 rounded-lg overflow-hidden" style="height: calc(100vh - 400px);">
+            {#if !showHtmlSource}
+              <!-- HTML Preview Frame -->
+              <iframe
+                srcdoc={processed.html}
+                class="w-full h-full border-0"
+                sandbox="allow-same-origin allow-scripts allow-forms"
+                title="HTML Content Preview"
+              ></iframe>
+            {:else}
+              <!-- HTML Source Editor - directly use Monaco without extra wrapper -->
+              <div bind:this={container} style="height: 100%; width: 100%;" class="monaco-container"></div>
+            {/if}
+          </div>
         </div>
       {:else if processed.type === 'code'}
         <MonacoEditor

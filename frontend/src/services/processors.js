@@ -97,6 +97,25 @@ export function processImage(content) {
 export { processMarkdown }
 
 /**
+ * Process HTML content
+ */
+export function processHTML(content) {
+  const text = typeof content === 'string' ? content : new TextDecoder().decode(content)
+
+  return {
+    type: 'html',
+    html: text,
+    metadata: {
+      charCount: text.length,
+      // Basic HTML structure validation
+      hasDoctype: text.toLowerCase().includes('<!doctype'),
+      hasHtmlTag: text.toLowerCase().includes('<html'),
+      hasBodyTag: text.toLowerCase().includes('<body')
+    }
+  }
+}
+
+/**
  * Process CSV content
  */
 export function processCSV(content) {
@@ -128,6 +147,15 @@ export function processCSV(content) {
  */
 export async function processContent(content, contentType, languageHint) {
   const contentTypeLower = contentType.toLowerCase()
+
+  // HTML
+  if (
+    contentTypeLower.includes('text/html') ||
+    contentTypeLower.includes('application/xhtml+xml') ||
+    contentTypeLower.includes('html')
+  ) {
+    return processHTML(content)
+  }
 
   // Markdown
   if (
