@@ -49,6 +49,41 @@ async def health():
     return {"status": "ok"}
 
 
+# ==================== Helper Functions ====================
+
+def generate_unique_paste_id(db: Session, max_retries: int = 5) -> str:
+    """
+    Generate a unique paste ID with collision handling.
+
+    Attempts to generate a unique ID by checking the database for existing IDs.
+    With 128-bit entropy (32 hex chars), collisions are astronomically rare,
+    but this provides defensive handling just in case.
+
+    Args:
+        db: Database session for checking existing IDs
+        max_retries: Maximum number of generation attempts (default: 5)
+
+    Returns:
+        A unique paste ID guaranteed not to exist in the database
+
+    Raises:
+        HTTPException: If unable to generate unique ID after max_retries
+    """
+    for attempt in range(max_retries):
+        paste_id = generate_paste_id()
+
+        # Check if ID already exists
+        existing = db.query(Paste).filter(Paste.id == paste_id).first()
+        if not existing:
+            return paste_id
+
+    # This should virtually never happen with 128-bit IDs
+    raise HTTPException(
+        status_code=500,
+        detail="Failed to generate unique paste ID after multiple attempts"
+    )
+
+
 # ==================== Paste Operations ====================
 
 @app.post("/api/v1/pastes", response_model=dict)
@@ -83,8 +118,8 @@ async def create_paste(
         if len(content) > settings.MAX_UPLOAD_SIZE:
             raise HTTPException(status_code=413, detail="File too large")
 
-        # Generate paste ID
-        paste_id = generate_paste_id()
+        # Generate unique paste ID with collision handling
+        paste_id = generate_unique_paste_id(db)
 
         # Process content
         metadata, preview = await process_content(content, content_type, language_hint)
@@ -209,8 +244,8 @@ async def edit_paste(
     try:
         content = await file.read()
 
-        # Generate new ID
-        new_id = generate_paste_id()
+        # Generate unique new ID with collision handling
+        new_id = generate_unique_paste_id(db)
 
         # Process content
         metadata, preview = await process_content(content, parent.content_type, parent.language_hint)
@@ -283,8 +318,8 @@ async def fork_paste(
             content = await storage_service.download(original.s3_key)
             content_type = original.content_type
 
-        # Generate new ID
-        new_id = generate_paste_id()
+        # Generate unique new ID with collision handling
+        new_id = generate_unique_paste_id(db)
 
         # Process content
         metadata, preview = await process_content(content, content_type, original.language_hint)

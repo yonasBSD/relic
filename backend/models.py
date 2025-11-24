@@ -32,10 +32,16 @@ class User(Base):
 
 
 class Paste(Base):
-    """Paste model."""
+    """
+    Paste model.
+
+    ID format: 32-character hexadecimal (GitHub Gist-style)
+    Example: f47ac10b58cc4372a5670e02b2c3d479
+    Generated via secrets.token_hex(16) for 128 bits of entropy
+    """
     __tablename__ = "paste"
 
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4())[:8])
+    id = Column(String(32), primary_key=True)  # 32-char hex IDs
     user_id = Column(String, ForeignKey('user.id'), nullable=True)
 
     # Content metadata

@@ -1,23 +1,33 @@
 """Utility functions."""
 import string
-import random
+import secrets
 from datetime import datetime, timedelta
 from typing import Optional
 import hashlib
 
 
-def generate_paste_id(length: int = 8) -> str:
+def generate_paste_id() -> str:
     """
-    Generate a base62 paste ID.
+    Generate GitHub Gist-style 32-character hexadecimal ID.
 
-    Args:
-        length: Length of ID
+    Provides 128 bits of entropy using cryptographically secure
+    random number generation. Practically collision-proof and
+    resistant to enumeration attacks.
+
+    Format: 32 lowercase hexadecimal characters (0-9, a-f)
+    Example: f47ac10b58cc4372a5670e02b2c3d479
 
     Returns:
-        Random base62 string
+        Cryptographically secure 32-character hex string
+
+    Security properties:
+        - 128 bits of entropy (16 bytes)
+        - Uses os.urandom() via secrets.token_hex()
+        - 50% collision probability: ~1.8×10^19 pastes
+        - Brute force at 1M attempts/sec: ~1.1×10^25 years
+        - Same approach as GitHub Gists
     """
-    chars = string.ascii_letters + string.digits
-    return ''.join(random.choice(chars) for _ in range(length))
+    return secrets.token_hex(16)  # 16 bytes = 32 hex characters
 
 
 def hash_password(password: str) -> str:
