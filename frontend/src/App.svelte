@@ -103,21 +103,6 @@
 
         <!-- User Menu -->
         <div class="flex items-center gap-4">
-          {#if currentSection === 'new' || currentSection === 'recent'}
-            <button
-              on:click={() => handleNavigation('new')}
-              class="bg-[#0E8420] hover:bg-[#0a6b19] text-white px-4 py-1.5 text-sm rounded shadow-sm font-medium transition-colors"
-            >
-              <i class="fas fa-plus mr-1"></i>
-              New Paste
-            </button>
-          {/if}
-          <div class="flex items-center gap-2 opacity-90 hover:opacity-100 cursor-pointer">
-            <i class="fa-regular fa-circle-user"></i>
-            <span class="text-sm">admin</span>
-          </div>
-          <div class="border-l border-white/20 h-4 mx-1"></div>
-          <i class="fa-solid fa-gear opacity-70 hover:opacity-100 cursor-pointer"></i>
         </div>
       </div>
     </div>
