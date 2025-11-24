@@ -50,6 +50,12 @@
   }
 
   
+  function copyRelicId(relicId) {
+    navigator.clipboard.writeText(relicId).then(() => {
+      // You could add a toast notification here if desired
+    })
+  }
+
   onMount(() => {
     loadMyRelics()
   })
@@ -115,7 +121,16 @@
                   <a href="/{relic.id}" class="font-medium text-[#0066cc] hover:underline block">
                     {relic.name || 'Untitled'}
                   </a>
-                  <span class="text-xs text-gray-400 font-mono">{relic.id}</span>
+                  <div class="flex items-center group gap-1">
+                    <span class="text-xs text-gray-400 font-mono">{relic.id}</span>
+                    <button
+                      on:click|stopPropagation={() => copyRelicId(relic.id)}
+                      class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 transition-all duration-200 -mt-0.5"
+                      title="Copy ID"
+                    >
+                      <i class="fas fa-copy text-xs"></i>
+                    </button>
+                  </div>
                 </td>
                 <td>
                   <span class="text-sm">{relic.content_type || 'Text'}</span>

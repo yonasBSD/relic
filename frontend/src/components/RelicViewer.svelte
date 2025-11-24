@@ -93,6 +93,12 @@
     relicId = newId
   }
 
+  function copyRelicId(id) {
+    navigator.clipboard.writeText(id).then(() => {
+      // You could add a toast notification here if desired
+    })
+  }
+
   // Initialize Monaco editor for HTML source view
   $: if (showHtmlSource && htmlContainer && processed?.html && !htmlEditor) {
     import('monaco-editor').then(monaco => {
@@ -219,7 +225,16 @@
             <i class="fas fa-file text-blue-600 mr-2"></i>
             {relic.name || 'Untitled'}
           </h2>
-          <span class="ml-3 text-xs bg-gray-100 px-2 py-1 rounded text-gray-600 font-mono">{relicId}</span>
+          <div class="flex items-center group gap-1">
+            <span class="ml-3 text-xs bg-gray-100 px-2 py-1 rounded text-gray-600 font-mono">{relicId}</span>
+            <button
+              on:click={() => copyRelicId(relicId)}
+              class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 transition-all duration-200 -mt-0.5"
+              title="Copy ID"
+            >
+              <i class="fas fa-copy text-xs"></i>
+            </button>
+          </div>
         </div>
         <div class="flex items-center gap-1">
           <button
