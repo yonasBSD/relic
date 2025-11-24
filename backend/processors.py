@@ -217,10 +217,40 @@ async def get_processor(content_type: str, content: bytes = None) -> ProcessorBa
         return ImageProcessor()
     elif "csv" in content_type_lower or content_type_lower == "text/csv":
         return CSVProcessor()
-    elif "code" in content_type_lower or any(lang in content_type_lower for lang in ["python", "javascript", "java", "c++"]):
+    elif (should_treat_as_code(content_type_lower)):
         return CodeProcessor()
     else:
         return TextProcessor()
+
+
+def should_treat_as_code(content_type: str) -> bool:
+    """Determine if a content type should be treated as code."""
+    # Explicit code content types
+    if content_type.startswith("application/") and any(ctype in content_type for ctype in [
+        "javascript", "json", "xml", "yaml", "yml", "toml", "ini", "config",
+        "ld+json", "hal+json", "vnd.api+json", "xml", "atom+xml", "rss+xml"
+    ]):
+        return True
+
+    # Check for common code file patterns in content type
+    code_indicators = [
+        "code", "script", "source", "json", "xml", "yaml", "yml", "toml",
+        "ini", "config", "css", "scss", "sass", "less", "stylus",
+        "python", "javascript", "java", "c++", "ruby", "go", "rust",
+        "php", "perl", "shell", "bash", "powershell", "sql",
+        "dockerfile", "makefile", "typescript", "coffeescript"
+    ]
+
+    if any(indicator in content_type for indicator in code_indicators):
+        return True
+
+    # All text/* types except these specific ones
+    if content_type.startswith("text/"):
+        # Exclude these text types from being treated as code
+        exclude_types = ["text/markdown", "text/html", "text/csv"]
+        return not any(content_type == exclude_type for exclude_type in exclude_types)
+
+    return False
 
 
 async def process_content(content: bytes, content_type: str, language_hint: Optional[str] = None) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
