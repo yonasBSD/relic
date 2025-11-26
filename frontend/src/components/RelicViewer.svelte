@@ -115,12 +115,6 @@
     loadRelic(relicId)
   }
 
-  onMount(() => {
-    if (relicId) {
-      loadRelic(relicId)
-    }
-  })
-
   
   function formatFileSize(bytes) {
     const units = ['B', 'KB', 'MB', 'GB']
@@ -259,6 +253,20 @@
   })
 
   </script>
+
+<style>
+  :global(.monaco-container .line-numbers) {
+    color: #6b7280 !important;
+  }
+
+  :global(.monaco-editor .line-numbers) {
+    color: #6b7280 !important;
+  }
+
+  :global(.monaco-editor .view-line .line-number) {
+    color: #6b7280 !important;
+  }
+</style>
 
 {#if loading}
   <div class="flex items-center justify-center py-12">
