@@ -74,3 +74,30 @@ export function detectLanguageHint(contentType) {
   }
   return typeToLanguage[contentType] || 'auto'
 }
+
+// Format time ago string
+export function formatTimeAgo(dateString) {
+  const now = new Date()
+  const date = new Date(dateString)
+  const diffInSeconds = Math.floor((now - date) / 1000)
+
+  if (diffInSeconds < 60) return 'just now'
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`
+  return `${Math.floor(diffInSeconds / 86400)}d ago`
+}
+
+// Copy relic ID to clipboard
+export function copyRelicId(relicId) {
+  navigator.clipboard.writeText(relicId).then(() => {
+    // Could add toast notification here if desired
+  })
+}
+
+// Get default items per page based on screen size
+export function getDefaultItemsPerPage() {
+  if (typeof window === 'undefined') return 20
+  const width = window.innerWidth
+  if (width < 768) return 10      // Mobile
+  return 20                        // Tablet & Desktop
+}

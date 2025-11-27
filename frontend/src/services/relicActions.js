@@ -92,13 +92,9 @@ export async function copyToClipboard(text, successMessage = 'Copied to clipboar
 }
 
 export function shareRelic(relicId) {
-  // Read current URL and include any line number parameters
-  const currentUrl = window.location.href
-  const urlParts = currentUrl.split('#')
-  const baseUrl = urlParts[0] || `${window.location.origin}/${relicId}`
-  const fragment = urlParts[1] || ''
-
-  const shareUrl = fragment ? `${baseUrl}#${fragment}` : baseUrl
+  // Get current URL fragment (may contain line numbers like #L10-L20)
+  const hash = window.location.hash
+  const shareUrl = `${window.location.origin}/${relicId}${hash}`
   copyToClipboard(shareUrl, 'Link copied to clipboard!')
 }
 
