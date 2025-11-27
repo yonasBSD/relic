@@ -1,4 +1,4 @@
-import { getRelicRaw } from './api'
+import { getRelicRaw, forkRelic } from './api'
 import { showToast } from '../stores/toastStore'
 
 export function getFileExtension(contentType) {
@@ -141,6 +141,34 @@ export async function downloadRelic(relicId, relicName, contentType) {
   } catch (error) {
     console.error('Failed to download relic:', error)
     showToast('Failed to download relic', 'error')
+  }
+}
+
+export async function fastForkRelic(relic) {
+  try {
+    // Get raw content of the relic
+    const response = await getRelicRaw(relic.id)
+    const blob = await response.data
+    const file = new File([blob], relic.name || `${relic.id}.txt`, { type: relic.content_type || 'text/plain' })
+
+    // Create fork with default settings (public, never expires, same name)
+    const forkResponse = await forkRelic(
+      relic.id,
+      file,
+      relic.name || null, // Keep the same name, let API handle null case
+      'public',
+      'never'
+    )
+
+    const forkedRelic = forkResponse.data
+    showToast('Relic forked successfully!', 'success')
+
+    // Navigate to the new forked relic
+    window.location.href = `/${forkedRelic.id}`
+
+  } catch (error) {
+    console.error('Failed to fork relic:', error)
+    showToast(error.message || 'Failed to fork relic', 'error')
   }
 }
 

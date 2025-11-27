@@ -2,7 +2,7 @@
   import { onMount } from 'svelte'
   import { showToast } from '../stores/toastStore'
   import { getClientRelics, deleteRelic } from '../services/api'
-  import { shareRelic, copyRelicContent, downloadRelic, viewRaw } from '../services/relicActions'
+  import { shareRelic, copyRelicContent, downloadRelic, viewRaw, fastForkRelic } from '../services/relicActions'
   import { getTypeLabel, formatBytes } from '../services/typeUtils'
 
   let relics = []
@@ -63,6 +63,10 @@
     navigator.clipboard.writeText(relicId).then(() => {
       // You could add a toast notification here if desired
     })
+  }
+
+  function handleForkRelic(relic) {
+    fastForkRelic(relic)
   }
 
   $: filteredRelics = relics.filter(relic => {
@@ -171,28 +175,35 @@
                   <div class="flex items-center gap-1">
                     <button
                       on:click|stopPropagation={() => shareRelic(relic.id)}
-                      class="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+                      class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                       title="Share relic"
                     >
                       <i class="fas fa-share text-xs"></i>
                     </button>
                     <button
                       on:click|stopPropagation={() => copyRelicContent(relic.id)}
-                      class="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded transition-colors"
+                      class="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
                       title="Copy content to clipboard"
                     >
                       <i class="fas fa-copy text-xs"></i>
                     </button>
                     <button
                       on:click|stopPropagation={() => viewRaw(relic.id)}
-                      class="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded transition-colors"
+                      class="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded transition-colors"
                       title="View raw content"
                     >
                       <i class="fas fa-code text-xs"></i>
                     </button>
                     <button
+                      on:click|stopPropagation={() => handleForkRelic(relic)}
+                      class="p-1.5 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded transition-colors"
+                      title="Create fork"
+                    >
+                      <i class="fas fa-code-branch text-xs"></i>
+                    </button>
+                    <button
                       on:click|stopPropagation={() => downloadRelic(relic.id, relic.name, relic.content_type)}
-                      class="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                      class="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded transition-colors"
                       title="Download relic"
                     >
                       <i class="fas fa-download text-xs"></i>
