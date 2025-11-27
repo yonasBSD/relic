@@ -81,11 +81,7 @@
           <i class="fas fa-clock mr-1"></i>
           {formatTimeAgo(relic.created_at)}
         </span>
-        <span class="flex items-center">
-          <i class="fas fa-code-branch mr-1"></i>
-          v{relic.version_number}
-        </span>
-      </div>
+              </div>
     </div>
     <div class="ml-4 flex-shrink-0 flex space-x-2">
       <button

@@ -119,15 +119,6 @@ export async function listRelics(limit = 1000) {
   return api.get('/relics', { params: { limit } })
 }
 
-export async function editRelic(relicId, file, name) {
-  const data = new FormData()
-  data.append('file', file)
-  if (name) data.append('name', name)
-
-  return api.post(`/relics/${relicId}/edit`, data, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  })
-}
 
 export async function forkRelic(relicId, file, name, accessLevel, expiresIn) {
   const data = new FormData()
@@ -146,25 +137,6 @@ export async function deleteRelic(relicId) {
   return api.delete(`/relics/${relicId}`)
 }
 
-export async function getRelicHistory(relicId) {
-  return api.get(`/relics/${relicId}/history`)
-}
-
-export async function getRelicParent(relicId) {
-  return api.get(`/relics/${relicId}/parent`)
-}
-
-export async function getRelicChildren(relicId) {
-  return api.get(`/relics/${relicId}/children`)
-}
-
-export async function diffRelics(fromId, toId) {
-  return api.get('/diff', { params: { from: fromId, to: toId } })
-}
-
-export async function diffWithParent(relicId) {
-  return api.get(`/relics/${relicId}/diff`)
-}
 
 export async function getRelicRaw(relicId) {
   return axios.get(`/${relicId}/raw`, {

@@ -53,11 +53,6 @@ class RelicCreate(RelicBase):
     content_type: Optional[str] = "text/plain"
 
 
-class RelicEdit(BaseModel):
-    """Relic edit schema (creates new version)."""
-    name: Optional[str] = None
-
-
 class RelicFork(BaseModel):
     """Relic fork schema."""
     name: Optional[str] = None
@@ -72,9 +67,6 @@ class RelicResponse(BaseModel):
     content_type: str
     language_hint: Optional[str]
     size_bytes: int
-    parent_id: Optional[str]
-    root_id: Optional[str]
-    version_number: int
     fork_of: Optional[str]
     access_level: Literal["public", "private"]
     created_at: datetime
@@ -93,21 +85,6 @@ class RelicListResponse(BaseModel):
     relics: List[RelicResponse]
 
 
-class RelicHistoryResponse(BaseModel):
-    """Relic history response schema."""
-    root_id: str
-    current_id: str
-    current_version: int
-    versions: List[dict]
-
-
-class DiffResponse(BaseModel):
-    """Diff response schema."""
-    from_id: str
-    to_id: str
-    diff: str
-    additions: int
-    deletions: int
 
 
 class PreviewResponse(BaseModel):

@@ -61,12 +61,7 @@ curl -X POST http://localhost:8000/api/v1/relics \\
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">/:id/raw</td>
                   <td class="px-6 py-4 text-sm text-gray-500">Get raw content</td>
                 </tr>
-                <tr>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">POST</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">/api/v1/relics/:id/edit</td>
-                  <td class="px-6 py-4 text-sm text-gray-500">Create new version</td>
-                </tr>
-                <tr>
+                                <tr>
                   <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">POST</td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">/api/v1/relics/:id/fork</td>
                   <td class="px-6 py-4 text-sm text-gray-500">Fork relic (new lineage)</td>
@@ -76,17 +71,7 @@ curl -X POST http://localhost:8000/api/v1/relics \\
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">/api/v1/relics/:id</td>
                   <td class="px-6 py-4 text-sm text-gray-500">Delete relic (soft delete)</td>
                 </tr>
-                <tr>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">GET</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">/api/v1/relics/:id/history</td>
-                  <td class="px-6 py-4 text-sm text-gray-500">Get version history</td>
-                </tr>
-                <tr>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">GET</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">/api/v1/diff</td>
-                  <td class="px-6 py-4 text-sm text-gray-500">Compare two relics</td>
-                </tr>
-              </tbody>
+                              </tbody>
             </table>
           </div>
         </div>
@@ -96,11 +81,11 @@ curl -X POST http://localhost:8000/api/v1/relics \\
           <ul class="space-y-2 text-sm text-gray-600">
             <li class="flex items-start">
               <i class="fas fa-check text-green-600 mr-2 mt-1"></i>
-              <span><strong>Immutable Relics:</strong> Each relic is permanent. Edits create new versions with complete history.</span>
+              <span><strong>Immutable Relics:</strong> Each relic is permanent and cannot be modified after creation.</span>
             </li>
             <li class="flex items-start">
               <i class="fas fa-check text-green-600 mr-2 mt-1"></i>
-              <span><strong>Version Lineage:</strong> Track complete history through parent-child relationships and forks.</span>
+              <span><strong>Fork Support:</strong> Create independent copies of relics for modification.</span>
             </li>
             <li class="flex items-start">
               <i class="fas fa-check text-green-600 mr-2 mt-1"></i>
@@ -110,11 +95,7 @@ curl -X POST http://localhost:8000/api/v1/relics \\
               <i class="fas fa-check text-green-600 mr-2 mt-1"></i>
               <span><strong>Smart Processing:</strong> Automatic syntax highlighting, thumbnail generation, metadata extraction.</span>
             </li>
-            <li class="flex items-start">
-              <i class="fas fa-check text-green-600 mr-2 mt-1"></i>
-              <span><strong>Diff Support:</strong> Compare any two relics with full diff output.</span>
-            </li>
-            <li class="flex items-start">
+                        <li class="flex items-start">
               <i class="fas fa-check text-green-600 mr-2 mt-1"></i>
               <span><strong>Access Control:</strong> Public, unlisted, and private relics with optional password protection.</span>
             </li>

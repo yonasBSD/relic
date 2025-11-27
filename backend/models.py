@@ -52,11 +52,8 @@ class Relic(Base):
     language_hint = Column(String, nullable=True)
     size_bytes = Column(Integer)
 
-    # Version tracking
-    parent_id = Column(String, ForeignKey('relic.id'), nullable=True)
-    root_id = Column(String, nullable=True, index=True)
-    version_number = Column(Integer, default=1)
-    fork_of = Column(String, nullable=True)
+    # Fork tracking (but no versioning)
+    fork_of = Column(String, nullable=True, index=True)  # Which relic this was forked from
 
     # Storage
     s3_key = Column(String)
@@ -78,7 +75,6 @@ class Relic(Base):
 
     # Relationships
     user = relationship("User", back_populates="relics")
-    parent = relationship("Relic", remote_side=[id], backref="children", foreign_keys=[parent_id])
     tags = relationship("Tag", secondary=relic_tags, back_populates="relics")
 
 class ClientKey(Base):

@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte'
-  import { getRelic, getRelicRaw, getRelicHistory, addBookmark, removeBookmark, checkBookmark } from '../services/api'
+  import { getRelic, getRelicRaw, addBookmark, removeBookmark, checkBookmark } from '../services/api'
   import { processContent } from '../services/processors'
   import { showToast } from '../stores/toastStore'
   import { shareRelic, copyRelicContent, downloadRelic, viewRaw } from '../services/relicActions'
@@ -12,9 +12,7 @@
   let relic = null
   let processed = null
   let loading = true
-  let history = []
-  let showHistory = false
-  let showHtmlSource = false
+    let showHtmlSource = false
   let showMarkdownSource = false
   let htmlContainer
   let markdownContainer
@@ -31,8 +29,7 @@
     loading = true
     relic = null
     processed = null
-    history = []
-
+    
     console.log('[RelicViewer] Loading relic:', id)
     try {
       console.log('[RelicViewer] Fetching relic metadata...')
@@ -53,13 +50,7 @@
       )
       console.log('[RelicViewer] Content processed:', processed)
 
-      // Load history if this is part of a version chain
-      if (relic.root_id) {
-        console.log('[RelicViewer] Loading history...')
-        const historyResponse = await getRelicHistory(id)
-        history = historyResponse.data.versions
-      }
-
+      
       // Check bookmark status
       await checkBookmarkStatus(id)
 
@@ -398,11 +389,7 @@
             <span class="text-xs text-gray-500 block mb-1">Views</span>
             <span class="block font-mono text-gray-900 text-xs">{relic.access_count}</span>
           </div>
-          <div>
-            <span class="text-xs text-gray-500 block mb-1">Version</span>
-            <span class="block font-mono text-gray-900 text-xs">v{relic.version_number}</span>
-          </div>
-        </div>
+                  </div>
         {#if relic.description}
           <div class="mt-4 pt-4 border-t border-gray-100">
             <span class="text-xs text-gray-500 block mb-1">Description</span>
@@ -585,40 +572,7 @@
       </div>
     {/if}
 
-    <!-- History -->
-    {#if history.length > 0}
-      <div class="bg-white shadow-sm rounded-lg border border-gray-200">
-        <div class="px-6 py-4 border-b border-gray-200">
-          <button
-            on:click={() => (showHistory = !showHistory)}
-            class="flex items-center text-lg font-semibold text-gray-900 hover:text-blue-600"
-          >
-            <i class="fas fa-code-branch mr-2"></i>
-            Version History
-            <i class="fas fa-chevron-down ml-2 transition-transform" class:rotate-180={showHistory}></i>
-          </button>
-        </div>
-        {#if showHistory}
-          <div class="divide-y divide-gray-200">
-            {#each history as version (version.id)}
-              <button
-                on:click={() => navigateToRelic(version.id)}
-                class="w-full p-4 hover:bg-gray-50 transition-colors block text-left border-0 bg-transparent cursor-pointer"
-              >
-                <div class="flex items-center justify-between">
-                  <div>
-                    <span class="font-medium text-gray-900">v{version.version}</span>
-                    <span class="text-sm text-gray-500 ml-2">{version.name || 'Untitled'}</span>
-                  </div>
-                  <span class="text-sm text-gray-500">{new Date(version.created_at).toLocaleString()}</span>
-                </div>
-              </button>
-            {/each}
-          </div>
-        {/if}
       </div>
-    {/if}
-  </div>
 {:else}
   <div class="flex items-center justify-center py-12">
     <div class="text-center">

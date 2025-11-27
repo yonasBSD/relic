@@ -3,6 +3,7 @@
   import { listRelics } from '../services/api'
   import { shareRelic, copyRelicContent, downloadRelic, viewRaw } from '../services/relicActions'
   import { getTypeLabel, formatBytes } from '../services/typeUtils'
+  import { showToast } from '../stores/toastStore'
 
   let relics = []
   let loading = true

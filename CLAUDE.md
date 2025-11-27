@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Relic** is a professional artifact storage service with immutable artifacts, complete version history tracking, and smart content processing. Built with FastAPI (Python), Svelte, and Tailwind CSS.
+**Relic** is a professional artifact storage service with immutable artifacts and smart content processing. Built with FastAPI (Python), Svelte, and Tailwind CSS.
 
-Key principle: Relics cannot be edited - edits create new versions linked to the original, preserving complete history.
+Key principle: Relics cannot be edited after creation - they are permanent and immutable. To modify content, create a fork which creates an independent copy.
 
 ### Tech Stack
 - **Backend**: FastAPI + SQLAlchemy + MinIO/S3
@@ -19,48 +19,52 @@ Key principle: Relics cannot be edited - edits create new versions linked to the
 ### 1. Immutable Relic Model
 
 - Each relic is permanent and cannot be edited after creation
-- "Editing" creates a **new relic** with `parent_id` pointing to the original
-- "Forking" creates an independent lineage with `fork_of` reference
-- All versions accessible at unique URLs and via history API
+- "Forking" creates an independent copy with `fork_of` reference to the source
+- Each relic has a unique URL that serves as the access identifier
+- No versioning - each relic stands alone
 
 **Database fields:**
-- `id`: Base62 ID (7-8 chars), primary key
-- `parent_id`: Link to previous version (null if original)
-- `root_id`: First relic in version chain (for efficient history lookup)
-- `version_number`: Sequential counter (1, 2, 3...)
-- `fork_of`: Source relic if forked (creates new root_id)
+- `id`: 32-character hexadecimal (GitHub Gist-style), primary key
+- `fork_of`: Source relic if forked (null for original relics)
 - `user_id`: Owner (nullable for anonymous)
+- `client_id`: Client identification key (nullable for anonymous)
+- `name`: Optional display name
+- `description`: Optional description
+- `content_type`: MIME type of the stored content
+- `language_hint`: Optional language hint for syntax highlighting
+- `size_bytes`: Size of the content in bytes
 - `s3_key`: Storage location (format: `relics/{id}`)
 - `access_level`: public (listed in recents) or private (URL is the access token)
+- `password_hash`: Optional password protection
 - `created_at`, `expires_at`, `deleted_at`: Timestamps
+- `access_count`: Number of times the relic has been accessed
+- `processing_metadata`: JSON field for extracted metadata and previews
 
 ### 2. Universal Content Support
 
 The system handles **any file type** (text, code, images, PDFs, CSVs, archives, etc.) with smart processing:
 
-- **Text/Code**: Syntax highlighting, line numbers, diff support
+- **Text/Code**: Syntax highlighting, line numbers
 - **Images**: EXIF extraction, thumbnail generation (200x200)
 - **PDFs**: Page count, first page preview, text extraction, metadata
 - **CSV/Excel**: Column detection, row count, statistics, data preview
 - **Videos/Archives**: Metadata extraction, preview without extraction
 
-All content types are versionable, diffable, and processable.
+All content types are processable with automatic metadata extraction and preview generation.
 
-### 3. Version Lineage & Relationships
+### 3. Fork Relationships
 
 ```
-Original:  a3Bk9Zx (v1)
-  ├─ Edit: b4Ck2Ty (v2, parent: a3Bk9Zx, root: a3Bk9Zx)
-  │   └─ Edit: c5Dm3Uz (v3, parent: b4Ck2Ty, root: a3Bk9Zx)
-  └─ Fork: x7Yz8Wx (v1, fork_of: a3Bk9Zx, root: x7Yz8Wx)
-      └─ Edit: y8Za9Xy (v2, parent: x7Yz8Wx, root: x7Yz8Wx)
+Original:  a3Bk9Zx
+  └─ Fork: x7Yz8Wx (fork_of: a3Bk9Zx)
+      └─ Fork: y8Za9Xy (fork_of: x7Yz8Wx)
 ```
 
 Key queries:
-- Get full history: traverse using `parent_id` or query by `root_id`
-- Get children: query all relics with this `id` as `parent_id`
-- Check if fork: look at `fork_of` field
-- Find root: use `root_id` field directly
+- Check if fork: look at `fork_of` field (null = original relic)
+- Get forks of a relic: query where `fork_of` = relic_id
+- Trace fork lineage: follow `fork_of` references backward
+- Each fork is independent - changes to original don't affect forks
 
 ### 4. Access Control & Expiration
 
@@ -76,7 +80,7 @@ Key queries:
 ## Storage Architecture
 
 - **Primary storage**: S3-compatible (MinIO) - one object per relic
-- **Database**: Stores metadata (id, user_id, parent_id, root_id, version_number, fork_of, content_type, language_hint, size_bytes, s3_key, created_at, expires_at, deleted_at, access_count, tags, etc.)
+- **Database**: Stores metadata (id, user_id, fork_of, content_type, language_hint, size_bytes, s3_key, created_at, expires_at, deleted_at, access_count, tags, etc.)
 - **Max upload**: 100MB (configurable)
 - **No S3 versioning needed**: Immutable model means each relic is independent
 
@@ -85,30 +89,22 @@ Key queries:
 ### Key Endpoint Patterns
 
 ```
-POST   /api/relics                    Create relic
-GET    /api/relics/:id                Get relic metadata
-GET    /:id/raw                       Get raw content
-POST   /api/relics/:id/edit           Create new version
-POST   /api/relics/:id/fork           Create fork (new lineage)
-DELETE /api/relics/:id                Delete relic (soft delete)
+POST   /api/v1/relics                  Create relic
+GET    /api/v1/relics/:id              Get relic metadata
+GET    /:id/raw                         Get raw content
+POST   /api/v1/relics/:id/fork         Create fork (independent copy)
+DELETE /api/v1/relics/:id              Delete relic (soft delete)
 
-GET    /api/relics/:id/history        Get full version history
-GET    /api/relics/:id/parent         Get parent relic
-GET    /api/relics/:id/children       Get child relics
-GET    /api/diff?from=:id1&to=:id2    Compare any two relics
-GET    /api/relics/:id/diff           Compare with parent
-
-GET    /api/relics/:id/preview        Get type-specific preview
-GET    /api/relics/:id/thumbnail      Get thumbnail image
-GET    /api/relics/search             Search by content/tags/type
-GET    /api/relics                    List recent relics
+GET    /api/v1/relics/:id/preview      Get type-specific preview
+GET    /api/v1/relics/:id/thumbnail    Get thumbnail image
+GET    /api/v1/relics                  List recent public relics
 ```
 
 ### Request/Response Pattern
 
-- **Create**: Returns `{id, url, parent_id, version, fork_of?}`
-- **Get**: Returns full metadata plus `content_type`, `size`, `created_at`, etc.
-- **Diff**: Returns `{from_id, to_id, diff, additions, deletions}`
+- **Create**: Returns `{id, url, fork_of?, created_at}`
+- **Get**: Returns full metadata including `content_type`, `size`, `created_at`, etc.
+- **Fork**: Returns `{id, url, fork_of, created_at}`
 - **Preview**: Type-specific (images: metadata+thumbnail_url, CSV: rows+columns+preview+stats, etc.)
 
 ## Project Structure
@@ -182,30 +178,27 @@ class MyTypeProcessor(ProcessorBase):
         return {"type": "mytype", "preview": {...}}
 ```
 
-### Handling Version Chains
+### Handling Fork Relationships
 
-For queries across version chains:
-- **Get history**: Query with `root_id` and sort by `created_at`
-- **Walk backward**: Follow `parent_id` pointers
-- **Find children**: Query where `parent_id = :id`
-- **Check if fork**: Look at `fork_of` field
-- **Efficient lookup**: Always use `root_id` for chain operations, not recursive parent lookups
+For queries across fork relationships:
+- **Check if fork**: Look at `fork_of` field (null = original)
+- **Get forks**: Query where `fork_of = :relic_id`
+- **Trace lineage**: Follow `fork_of` references backward
+- **Independent copies**: Each fork is completely independent
 
 Example:
 ```python
-# Get all versions in chain
-db.query(Relic).filter(Relic.root_id == original_root_id).order_by(Relic.created_at)
+# Get all forks of a relic
+db.query(Relic).filter(Relic.fork_of == relic_id).order_by(Relic.created_at.desc())
 
-# Get children
-db.query(Relic).filter(Relic.parent_id == relic_id)
+# Check if relic is a fork
+relic.fork_of  # None if original, otherwise contains source relic ID
+
+# Get original relic from a fork
+if relic.fork_of:
+    original = db.query(Relic).filter(Relic.id == relic.fork_of).first()
 ```
 
-### Diff Implementation
-
-In `backend/main.py`, diff endpoints:
-- **Text/Code**: Use `difflib.unified_diff()` for line-by-line comparison
-- **Binary**: Compare metadata only (size, dimensions, EXIF)
-- **Syntax highlighting**: Apply Pygments to diff output (not yet implemented)
 
 ### Search & Filtering
 
@@ -228,8 +221,8 @@ Frontend uses simple section-based routing (not a full router). To add new pages
 
 - **Upload**: <500ms for <1MB files
 - **Retrieval**: <100ms
-- **Diff**: <200ms for 10KB text
-- **History query**: <50ms
+- **Fork creation**: <300ms for <1MB files
+- **Forks query**: <50ms
 
 ## Security
 
@@ -241,9 +234,9 @@ Frontend uses simple section-based routing (not a full router). To add new pages
 
 ## Key Implementation Decisions
 
-1. **Immutability over editability**: This is the core philosophy - edits create new versions
-2. **Soft delete**: Allows recovery and maintains referential integrity (children stay linked)
-3. **S3 storage**: Scales to millions of relics, supports any file type
-4. **Base62 IDs**: URL-friendly, shorter than UUIDs
-5. **Version chains**: Preserve complete history without manual tracking
+1. **True immutability**: Each relic is permanent and cannot be modified after creation
+2. **Fork-based modification**: To modify content, create an independent fork
+3. **Soft delete**: Allows recovery and maintains referential integrity
+4. **S3 storage**: Scales to millions of relics, supports any file type
+5. **Cryptographic IDs**: 32-character hexadecimal IDs (GitHub Gist-style) for security and collision resistance
 6. **Smart processing**: Different previews for different types (syntax highlighting vs. image thumbnails vs. stats)
