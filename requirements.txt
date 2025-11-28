@@ -9,10 +9,6 @@ pydantic>=2.0
 pydantic-settings>=2.0
 python-multipart>=0.0.6
 
-# Authentication
-python-jose>=3.3.0
-passlib>=1.7.4
-bcrypt>=4.0.0
 
 # Storage & Cloud
 boto3>=1.26.0

@@ -37,11 +37,6 @@ class Settings(BaseSettings):
     BACKUP_ON_STARTUP: bool = os.getenv("BACKUP_ON_STARTUP", "true").lower() == "true"
     BACKUP_ON_SHUTDOWN: bool = os.getenv("BACKUP_ON_SHUTDOWN", "true").lower() == "true"
 
-    # JWT
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
-
     # CORS - accept as string from env, parse in validator
     ALLOWED_ORIGINS: str = '["http://localhost:3000", "http://localhost:8000"]'
 
