@@ -139,8 +139,3 @@ backup-status:
 	@echo "=============================="
 	@docker compose exec backend python -c "import asyncio; from backend.backup import list_all_backups; from backend.config import settings; backups = asyncio.run(list_all_backups()); sorted_backups = sorted(backups, key=lambda x: x['timestamp'], reverse=True); print(f'Enabled: {settings.BACKUP_ENABLED}'); print(f'Backup times: {settings.BACKUP_TIMES} ({settings.BACKUP_TIMEZONE})'); print(f'Startup backup: {settings.BACKUP_ON_STARTUP}'); print(f'Shutdown backup: {settings.BACKUP_ON_SHUTDOWN}'); print(f'Retention: {settings.BACKUP_RETENTION_DAYS}d daily, {settings.BACKUP_RETENTION_WEEKS}d weekly, monthly forever'); print(''); print(f'Total backups: {len(sorted_backups)}'); print(f'Total size: {sum(b[\"size\"] for b in sorted_backups) / 1024 / 1024:.2f} MB'); print(f'Last backup: {sorted_backups[0][\"timestamp\"].strftime(\"%Y-%m-%d %H:%M:%S UTC\")} ({sorted_backups[0][\"size\"]/1024/1024:.2f} MB)') if sorted_backups else None"
 
-# Old commands (kept for backwards compatibility but no longer used)
-.PHONY: venv install dev backend frontend docker-up docker-down stop
-venv install dev backend frontend docker-up docker-down stop:
-	@echo "This command is no longer used in the container-based setup."
-	@echo "Use 'make help' for available commands."

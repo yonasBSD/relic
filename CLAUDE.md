@@ -126,9 +126,12 @@ relic/
 │   │   │   ├── Navigation.svelte
 │   │   │   ├── RelicForm.svelte
 │   │   │   ├── RelicViewer.svelte
-│   │   │   ├── RelicItem.svelte
-│   │   │   ├── RecentRelics.svelte
+│   │   │   ├── ForkModal.svelte
+│   │   │   ├── MonacoEditor.svelte
+│   │   │   ├── MyBookmarks.svelte
 │   │   │   ├── MyRelics.svelte
+│   │   │   ├── RecentRelics.svelte
+│   │   │   ├── RelicTable.svelte
 │   │   │   ├── ApiDocs.svelte
 │   │   │   └── Toast.svelte
 │   │   ├── stores/

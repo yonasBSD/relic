@@ -82,40 +82,22 @@ curl http://localhost:8000/api/v1/relics/{id}
 curl http://localhost:8000/{id}/raw
 ```
 
-**Edit Relic (Create New Version)**
-```bash
-curl -X POST http://localhost:8000/api/v1/relics/{id}/edit \
-  -F "file=@updated.txt" \
-  -F "name=Updated Name"
-```
-
-**Fork Relic (New Lineage)**
+**Fork Relic (Create Independent Copy)**
 ```bash
 curl -X POST http://localhost:8000/api/v1/relics/{id}/fork \
-  -F "file=@forked.txt"
+  -F "file=@new.txt" \
+  -F "name=Forked Relic"
 ```
+
+**Note**: Relics are immutable - to modify content, create a fork which creates an independent copy.
 
 **Delete Relic**
 ```bash
 curl -X DELETE http://localhost:8000/api/v1/relics/{id}
 ```
 
-### Version & Lineage
+### Forks & Lineage
 
-**Get Version History**
-```bash
-curl http://localhost:8000/api/v1/relics/{id}/history
-```
-
-**Compare Two Relics**
-```bash
-curl "http://localhost:8000/api/v1/diff?from={id1}&to={id2}"
-```
-
-**Compare with Parent**
-```bash
-curl http://localhost:8000/api/v1/relics/{id}/diff
-```
 
 ### Listing & Search
 
@@ -134,10 +116,7 @@ curl "http://localhost:8000/api/v1/relics?limit=50&offset=0"
 - `content_type`: MIME type
 - `language_hint`: Programming language for code
 - `size_bytes`: Content size
-- `parent_id`: Reference to previous version
-- `root_id`: Reference to first relic in chain
-- `version_number`: Sequential version (1, 2, 3...)
-- `fork_of`: Reference to source relic if forked
+- `fork_of`: Source relic if forked (null for original relics)
 - `s3_key`: Storage location in S3
 - `access_level`: public/unlisted/private
 - `created_at`: Creation timestamp
@@ -177,7 +156,6 @@ See `.env` file for configuration:
 - `S3_SECRET_KEY`: S3 secret key
 - `S3_BUCKET_NAME`: S3 bucket name
 - `MAX_UPLOAD_SIZE`: Maximum upload size (bytes)
-- `SECRET_KEY`: JWT secret for authentication
 
 ## File Processing
 
@@ -213,17 +191,6 @@ Different content types receive smart processing:
 - Metadata extraction (duration, resolution, codecs)
 - File preview without extraction
 
-## Version Lineage Example
-
-```
-Original:  a3Bk9Zx (v1)
-  ├─ Edit: b4Ck2Ty (v2, parent: a3Bk9Zx, root: a3Bk9Zx)
-  │   └─ Edit: c5Dm3Uz (v3, parent: b4Ck2Ty, root: a3Bk9Zx)
-  └─ Fork: x7Yz8Wx (v1, fork_of: a3Bk9Zx, root: x7Yz8Wx)
-      └─ Edit: y8Za9Xy (v2, parent: x7Yz8Wx, root: x7Yz8Wx)
-```
-
-All versions remain accessible at their unique URLs. Complete history is preserved.
 
 ## Performance Targets
 
