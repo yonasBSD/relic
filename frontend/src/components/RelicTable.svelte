@@ -106,9 +106,9 @@
                   {#if tableId !== 'recent-relics'}
                     <div class="flex items-center gap-1 flex-shrink-0">
                       {#if relic.access_level === 'private'}
-                        <i class="fas fa-lock text-xs text-gray-400" title="Private - accessible only via URL"></i>
+                        <i class="fas fa-lock text-xs" style="color: #76306c;" title="Private - accessible only via URL"></i>
                       {:else if relic.access_level === 'public'}
-                        <i class="fas fa-globe text-xs text-gray-400" title="Public - discoverable"></i>
+                        <i class="fas fa-globe text-xs" style="color: #217db1;" title="Public - discoverable"></i>
                       {/if}
                     </div>
                   {/if}

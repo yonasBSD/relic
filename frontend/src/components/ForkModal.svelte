@@ -339,10 +339,10 @@
           <div class="flex justify-between items-center">
             <div class="text-xs text-gray-500">
               {#if forkAccessLevel === 'public'}
-                <i class="fas fa-globe text-blue-500 mr-1"></i>
+                <i class="fas fa-globe mr-1" style="color: #217db1;"></i>
                 Public fork - anyone can view
               {:else}
-                <i class="fas fa-lock text-gray-500 mr-1"></i>
+                <i class="fas fa-lock mr-1" style="color: #76306c;"></i>
                 Private fork - URL-only access
               {/if}
             </div>

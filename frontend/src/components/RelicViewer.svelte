@@ -276,12 +276,12 @@
         <div class="flex items-center flex-wrap gap-2 mb-3">
           <!-- Status Badges -->
           {#if relic.access_level === 'private'}
-            <span class="inline-flex items-center gap-1.5 px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium leading-none" title="Private - accessible only via URL">
+            <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium leading-none" style="background-color: #fce3eb; color: #76306c;" title="Private - accessible only via URL">
               <i class="fas fa-lock text-[10px]"></i>
               <span class="hidden sm:inline">Private</span>
             </span>
           {:else if relic.access_level === 'public'}
-            <span class="inline-flex items-center gap-1.5 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium leading-none" title="Public - discoverable">
+            <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium leading-none" style="background-color: #e2f2fd; color: #217db1;" title="Public - discoverable">
               <i class="fas fa-globe text-[10px]"></i>
               <span class="hidden sm:inline">Public</span>
             </span>
