@@ -15,6 +15,7 @@
   export let readOnly = true
   export let height = '600px'
   export let relicId = ''
+  export let noWrapper = false
 
   let container
   let editor
@@ -307,9 +308,13 @@
   }
 </script>
 
-<div class="bg-white shadow-sm rounded-lg border border-gray-200 mb-6 overflow-hidden">
+{#if noWrapper}
   <div bind:this={container} style="height: {height};" class="w-full monaco-editor-clickable-lines" />
-</div>
+{:else}
+  <div class="bg-white shadow-sm rounded-lg border border-gray-200 mb-6 overflow-hidden">
+    <div bind:this={container} style="height: {height};" class="w-full monaco-editor-clickable-lines" />
+  </div>
+{/if}
 
 <style>
   /* Styles for highlighted lines */

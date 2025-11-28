@@ -14,6 +14,7 @@
   let currentSection = 'new'
   let currentRelicId = null
   let showKeyDropdown = false
+  let relicViewerFullWidth = false
 
   function updateRouting() {
     const path = window.location.pathname
@@ -42,6 +43,12 @@
   onMount(() => {
     // Initialize client key on app start
     getOrCreateClientKey()
+
+    // Load full-width preference from localStorage
+    const saved = localStorage.getItem('relic_viewer_fullwidth')
+    if (saved !== null) {
+      relicViewerFullWidth = saved === 'true'
+    }
 
     // Initial routing on page load
     updateRouting()
@@ -130,6 +137,10 @@
     // Reset file input
     event.target.value = ''
     showKeyDropdown = false
+  }
+
+  function handleFullWidthToggle(event) {
+    relicViewerFullWidth = event.detail.isFullWidth
   }
 </script>
 
@@ -245,9 +256,9 @@
 
   <!-- Main Content -->
   <main class="flex-1 overflow-auto">
-    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    <div class="{relicViewerFullWidth && currentSection === 'relic' ? 'w-full' : 'max-w-7xl mx-auto'} py-6 px-4 sm:px-6 lg:px-8 transition-all duration-300">
       {#if currentSection === 'relic' && currentRelicId}
-        <RelicViewer relicId={currentRelicId} />
+        <RelicViewer relicId={currentRelicId} on:fullwidth-toggle={handleFullWidthToggle} />
       {:else if currentSection === 'new' || currentSection === 'default' || currentSection === ''}
         <RelicForm />
       {:else if currentSection === 'recent'}

@@ -240,6 +240,7 @@
               language={forkLanguage === 'auto' ? 'plaintext' : forkLanguage}
               readOnly={false}
               height="calc(90vh - 280px)"
+              noWrapper={true}
               on:change={(event) => handleContentChange(event.detail)}
             />
           </div>
