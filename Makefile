@@ -1,4 +1,4 @@
-.PHONY: help up down logs logs-backend logs-frontend logs-nginx stop restart build rebuild clean test db-init shell-backend shell-frontend
+.PHONY: help up down logs logs-backend logs-frontend logs-nginx stop restart build rebuild clean test db-init shell-backend shell-frontend backup-now backup-list backup-cleanup backup-status
 
 help:
 	@echo "Relic Development Commands (Container-based)"
@@ -24,6 +24,12 @@ help:
 	@echo "  make build         - Build images without starting containers"
 	@echo "  make clean         - Stop containers and clean up volumes"
 	@echo "  make test          - Run tests in backend container"
+	@echo ""
+	@echo "Database Backups:"
+	@echo "  make backup-now    - Trigger manual database backup"
+	@echo "  make backup-list   - List all database backups"
+	@echo "  make backup-cleanup - Run retention policy cleanup"
+	@echo "  make backup-status - Show backup system status"
 	@echo ""
 	@echo "Service URLs:"
 	@echo "  Frontend:  http://localhost"
@@ -106,6 +112,32 @@ clean:
 	@echo "✓ Containers and volumes removed"
 	@echo ""
 	@echo "Note: Use 'make up' to start fresh"
+
+# ===== Database Backup Commands =====
+
+# Trigger manual database backup
+backup-now:
+	@echo "Triggering manual database backup..."
+	@docker compose exec backend python -c "import asyncio; from backend.backup import perform_backup; asyncio.run(perform_backup(backup_type='manual'))"
+	@echo "✓ Backup completed"
+
+# List all database backups
+backup-list:
+	@echo "Listing all database backups..."
+	@echo ""
+	@docker compose exec backend python -c "import asyncio; from backend.backup import list_all_backups; backups = asyncio.run(list_all_backups()); sorted_backups = sorted(backups, key=lambda x: x['timestamp'], reverse=True); print(f'Total backups: {len(sorted_backups)}'); print(f'Total size: {sum(b[\"size\"] for b in sorted_backups) / 1024 / 1024:.2f} MB'); print(''); print('Recent backups:'); print('-' * 80); [print(f'{b[\"timestamp\"].strftime(\"%Y-%m-%d %H:%M:%S UTC\"):<25} {b[\"size\"]/1024/1024:>10.2f} MB  {b[\"key\"]}') for b in sorted_backups[:20]]"
+
+# Run backup retention cleanup
+backup-cleanup:
+	@echo "Running backup retention cleanup..."
+	@docker compose exec backend python -c "import asyncio; from backend.backup import cleanup_old_backups; asyncio.run(cleanup_old_backups())"
+	@echo "✓ Cleanup completed"
+
+# Show backup system status
+backup-status:
+	@echo "Database Backup System Status"
+	@echo "=============================="
+	@docker compose exec backend python -c "import asyncio; from backend.backup import list_all_backups; from backend.config import settings; backups = asyncio.run(list_all_backups()); sorted_backups = sorted(backups, key=lambda x: x['timestamp'], reverse=True); print(f'Enabled: {settings.BACKUP_ENABLED}'); print(f'Backup times: {settings.BACKUP_TIMES} ({settings.BACKUP_TIMEZONE})'); print(f'Startup backup: {settings.BACKUP_ON_STARTUP}'); print(f'Shutdown backup: {settings.BACKUP_ON_SHUTDOWN}'); print(f'Retention: {settings.BACKUP_RETENTION_DAYS}d daily, {settings.BACKUP_RETENTION_WEEKS}d weekly, monthly forever'); print(''); print(f'Total backups: {len(sorted_backups)}'); print(f'Total size: {sum(b[\"size\"] for b in sorted_backups) / 1024 / 1024:.2f} MB'); print(f'Last backup: {sorted_backups[0][\"timestamp\"].strftime(\"%Y-%m-%d %H:%M:%S UTC\")} ({sorted_backups[0][\"size\"]/1024/1024:.2f} MB)') if sorted_backups else None"
 
 # Old commands (kept for backwards compatibility but no longer used)
 .PHONY: venv install dev backend frontend docker-up docker-down stop

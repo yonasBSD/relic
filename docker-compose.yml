@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Nginx reverse proxy
   nginx:
@@ -32,6 +30,13 @@ services:
       MINIO_USE_SSL: "false"
       DEBUG: "true"
       ALLOWED_ORIGINS: "http://localhost:5173,http://localhost:3000"
+      # Database Backup Configuration
+      BACKUP_ENABLED: "true"
+      BACKUP_TIMES: "02:00,14:00"
+      BACKUP_TIMEZONE: "UTC"
+      BACKUP_CLEANUP_ENABLED: "true"
+      BACKUP_ON_STARTUP: "true"
+      BACKUP_ON_SHUTDOWN: "true"
     volumes:
       - ./backend:/app/backend:z
       - ./requirements.txt:/app/requirements.txt:ro

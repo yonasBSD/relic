@@ -27,7 +27,16 @@ class Settings(BaseSettings):
     # Upload limits
     MAX_UPLOAD_SIZE: int = 100 * 1024 * 1024  # 100 MB
 
-  
+    # Database Backup Configuration
+    BACKUP_ENABLED: bool = os.getenv("BACKUP_ENABLED", "true").lower() == "true"
+    BACKUP_TIMES: str = os.getenv("BACKUP_TIMES", "02:00,14:00")  # Comma-separated HH:MM
+    BACKUP_TIMEZONE: str = os.getenv("BACKUP_TIMEZONE", "UTC")
+    BACKUP_RETENTION_DAYS: int = int(os.getenv("BACKUP_RETENTION_DAYS", "7"))
+    BACKUP_RETENTION_WEEKS: int = int(os.getenv("BACKUP_RETENTION_WEEKS", "30"))
+    BACKUP_CLEANUP_ENABLED: bool = os.getenv("BACKUP_CLEANUP_ENABLED", "true").lower() == "true"
+    BACKUP_ON_STARTUP: bool = os.getenv("BACKUP_ON_STARTUP", "true").lower() == "true"
+    BACKUP_ON_SHUTDOWN: bool = os.getenv("BACKUP_ON_SHUTDOWN", "true").lower() == "true"
+
     # JWT
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
     ALGORITHM: str = "HS256"
@@ -63,6 +72,23 @@ class Settings(BaseSettings):
         if isinstance(self.ALLOWED_ORIGINS, list):
             return self.ALLOWED_ORIGINS
         return json.loads(self.ALLOWED_ORIGINS) if isinstance(self.ALLOWED_ORIGINS, str) else []
+
+    def get_backup_times(self) -> List[tuple]:
+        """
+        Parse BACKUP_TIMES into list of (hour, minute) tuples.
+
+        Example: "02:00,14:00" -> [(2, 0), (14, 0)]
+
+        Returns:
+            List of (hour, minute) tuples
+        """
+        times = []
+        for time_str in self.BACKUP_TIMES.split(','):
+            time_str = time_str.strip()
+            if ':' in time_str:
+                hour, minute = time_str.split(':')
+                times.append((int(hour), int(minute)))
+        return times
 
 
 settings = Settings()
