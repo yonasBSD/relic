@@ -57,26 +57,3 @@ async def cleanup_expired_relics():
 
     finally:
         db.close()
-
-
-async def start_background_tasks():
-    """Start background task scheduler."""
-    # Run cleanup every hour
-    while True:
-        try:
-            await cleanup_expired_relics()
-        except Exception as e:
-            print(f"Error in cleanup task: {e}")
-
-        # Wait 1 hour before next run
-        await asyncio.sleep(3600)
-
-
-# For scheduling with APScheduler (if needed in future)
-def get_cleanup_job_config():
-    """Return APScheduler job configuration for expiration cleanup."""
-    return {
-        'func': 'backend.tasks:cleanup_expired_relics',
-        'trigger': 'interval',
-        'hours': 1
-    }
