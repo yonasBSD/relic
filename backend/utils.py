@@ -35,11 +35,6 @@ def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
 
-def verify_password(password: str, hashed: str) -> bool:
-    """Verify password against hash."""
-    return hash_password(password) == hashed
-
-
 def parse_expiry_string(expires_in: Optional[str]) -> Optional[datetime]:
     """
     Parse expiry string and return expiration datetime.
@@ -85,10 +80,3 @@ def generate_client_id() -> str:
     return secrets.token_hex(16)
 
 
-def format_file_size(size_bytes: int) -> str:
-    """Format bytes to human-readable format."""
-    for unit in ['B', 'KB', 'MB', 'GB']:
-        if size_bytes < 1024:
-            return f"{size_bytes:.1f} {unit}"
-        size_bytes /= 1024
-    return f"{size_bytes:.1f} TB"
