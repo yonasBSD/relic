@@ -147,7 +147,7 @@
                       class="p-1.5 text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded transition-colors"
                       title="Remove from bookmarks"
                     >
-                      <i class="fas fa-bookmark-slash text-xs"></i>
+                      <i class="fas fa-bookmark text-xs"></i>
                     </button>
                   {/if}
 
