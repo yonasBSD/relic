@@ -1,158 +1,182 @@
 <script>
-  import { forkRelic, getRelicRaw } from '../services/api'
-  import { showToast } from '../stores/toastStore'
-  import { getContentType, getFileExtension, detectLanguageHint } from '../services/typeUtils'
-  import MonacoEditor from './MonacoEditor.svelte'
-  import MarkdownIt from 'markdown-it'
+  import { forkRelic, getRelicRaw } from "../services/api";
+  import { showToast } from "../stores/toastStore";
+  import {
+    getContentType,
+    getFileExtension,
+    detectLanguageHint,
+    getAvailableSyntaxOptions,
+  } from "../services/typeUtils";
+  import MonacoEditor from "./MonacoEditor.svelte";
+  import MarkdownIt from "markdown-it";
 
   const md = new MarkdownIt({
     html: true,
     linkify: true,
     breaks: true,
-    typographer: true
-  })
+    typographer: true,
+  });
 
-  export let open = false
-  export let relicId = ''
-  export let relic = null
+  const syntaxOptions = getAvailableSyntaxOptions();
 
-  let forkName = ''
-  let forkContent = ''
-  let forkLanguage = 'auto'
-  let forkAccessLevel = 'public'
-  let forkExpiration = 'never'
-  let isLoading = false
-  let editorContent = ''
-  let isExpanded = false
-  let showPreview = false
+  export let open = false;
+  export let relicId = "";
+  export let relic = null;
+
+  let forkName = "";
+  let forkContent = "";
+  let forkLanguage = "auto";
+  let forkAccessLevel = "public";
+  let forkExpiration = "never";
+  let isLoading = false;
+  let editorContent = "";
+  let isExpanded = false;
+  let showPreview = false;
 
   async function loadOriginalContent() {
-    if (!relicId) return
+    if (!relicId) return;
 
     try {
-      const response = await getRelicRaw(relicId)
-      const content = await response.data.arrayBuffer()
-      const text = new TextDecoder().decode(content)
+      const response = await getRelicRaw(relicId);
+      const content = await response.data.arrayBuffer();
+      const text = new TextDecoder().decode(content);
 
-      forkContent = text
-      editorContent = text
+      forkContent = text;
+      editorContent = text;
 
       // Auto-detect language from original relic
       if (relic.language_hint) {
-        forkLanguage = relic.language_hint
+        forkLanguage = relic.language_hint;
       } else {
-        forkLanguage = detectLanguageHint(relic.content_type)
+        forkLanguage = detectLanguageHint(relic.content_type);
       }
     } catch (error) {
-      showToast('Failed to load original relic content', 'error')
-      forkContent = ''
-      editorContent = ''
+      showToast("Failed to load original relic content", "error");
+      forkContent = "";
+      editorContent = "";
     }
   }
 
   async function handleForkSubmit(e) {
-    e.preventDefault()
+    e.preventDefault();
 
     // Use editorContent as the most up-to-date content
-    const finalContent = editorContent || forkContent || ''
+    const finalContent = editorContent || forkContent || "";
 
     if (!finalContent.trim()) {
-      showToast('Please enter some content', 'warning')
-      return
+      showToast("Please enter some content", "warning");
+      return;
     }
 
-    isLoading = true
+    isLoading = true;
 
     try {
       // Determine content type based on type selection
-      const contentType = forkLanguage !== 'auto' ? getContentType(forkLanguage) : 'text/plain'
-      const fileExtension = forkLanguage !== 'auto' ? getFileExtension(forkLanguage) : 'txt'
+      const contentType =
+        forkLanguage !== "auto" ? getContentType(forkLanguage) : "text/plain";
+      const fileExtension =
+        forkLanguage !== "auto" ? getFileExtension(forkLanguage) : "txt";
 
       // Create a File object from the content with proper MIME type
-      const blob = new Blob([finalContent], { type: contentType })
-      const fileName = forkName || `fork-of-${relicId}.${fileExtension}`
-      const file = new File([blob], fileName, { type: contentType })
+      const blob = new Blob([finalContent], { type: contentType });
+      const fileName = forkName || `fork-of-${relicId}.${fileExtension}`;
+      const file = new File([blob], fileName, { type: contentType });
 
       // Use our fork API function
-      const response = await forkRelic(relicId, file, forkName, forkAccessLevel, forkExpiration)
+      const response = await forkRelic(
+        relicId,
+        file,
+        forkName,
+        forkAccessLevel,
+        forkExpiration,
+      );
 
-      const data = response.data
-      const forkedRelicUrl = `/${data.id}`
-      showToast('Relic forked successfully!', 'success')
+      const data = response.data;
+      const forkedRelicUrl = `/${data.id}`;
+      showToast("Relic forked successfully!", "success");
 
       // Navigate to the new forked relic
-      window.location.href = forkedRelicUrl
+      window.location.href = forkedRelicUrl;
 
       // Reset form and close modal
-      resetForm()
-      open = false
+      resetForm();
+      open = false;
     } catch (error) {
-      showToast(error.message || 'Failed to fork relic', 'error')
+      showToast(error.message || "Failed to fork relic", "error");
     } finally {
-      isLoading = false
+      isLoading = false;
     }
   }
 
   function resetForm() {
-    forkName = ''
-    forkContent = ''
-    forkLanguage = 'auto'
-    forkAccessLevel = 'public'
-    forkExpiration = 'never'
-    editorContent = ''
-    isExpanded = false
-    showPreview = false
+    forkName = "";
+    forkContent = "";
+    forkLanguage = "auto";
+    forkAccessLevel = "public";
+    forkExpiration = "never";
+    editorContent = "";
+    isExpanded = false;
+    showPreview = false;
   }
 
   function handleContentChange(newContent) {
-    forkContent = newContent
-    editorContent = newContent
+    forkContent = newContent;
+    editorContent = newContent;
   }
 
   // Load original content when modal opens
   $: if (open && relicId && relic) {
-    loadOriginalContent()
+    loadOriginalContent();
   }
 
   // Reset when modal closes
   $: if (!open) {
-    resetForm()
+    resetForm();
   }
 
   function closeModal() {
-    open = false
+    open = false;
   }
 
   function handleBackdropClick(e) {
     if (e.target === e.currentTarget) {
-      closeModal()
+      closeModal();
     }
   }
 
   // Helper function to render markdown to HTML using markdown-it
   function renderMarkdown(text) {
     try {
-      return md.render(text || '')
+      return md.render(text || "");
     } catch (error) {
-      console.error('Markdown rendering error:', error)
-      return '<p class="text-red-600">Error rendering markdown</p>'
+      console.error("Markdown rendering error:", error);
+      return '<p class="text-red-600">Error rendering markdown</p>';
     }
   }
 
   // Check if current language supports preview
-  $: supportsPreview = forkLanguage === 'markdown' || forkLanguage === 'html'
+  $: supportsPreview = forkLanguage === "markdown" || forkLanguage === "html";
 
   // Reset preview when language changes to non-previewable type
   $: if (!supportsPreview) {
-    showPreview = false
+    showPreview = false;
   }
 </script>
 
 {#if open}
-  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" on:click={handleBackdropClick}>
-    <div class="bg-white rounded-lg shadow-xl w-full h-[90vh] overflow-hidden flex flex-col transition-all duration-300" style="max-width: {isExpanded ? '98vw' : 'min(1200px, 95vw)'};" on:click|stopPropagation>
+  <div
+    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+    on:click={handleBackdropClick}
+  >
+    <div
+      class="bg-white rounded-lg shadow-xl w-full h-[90vh] overflow-hidden flex flex-col transition-all duration-300"
+      style="max-width: {isExpanded ? '98vw' : 'min(1200px, 95vw)'};"
+      on:click|stopPropagation
+    >
       <!-- Header -->
-      <div class="px-6 py-3 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+      <div
+        class="px-6 py-3 border-b border-gray-200 flex items-center justify-between flex-shrink-0"
+      >
         <div class="flex items-center gap-4">
           <h2 class="text-lg font-semibold text-gray-900 flex items-center">
             <i class="fas fa-code-branch text-teal-600 mr-2"></i>
@@ -172,12 +196,21 @@
       </div>
 
       <!-- Form -->
-      <form on:submit={handleForkSubmit} class="flex-1 flex flex-col overflow-hidden">
+      <form
+        on:submit={handleForkSubmit}
+        class="flex-1 flex flex-col overflow-hidden"
+      >
         <!-- Compact Settings Bar -->
-        <div class="px-6 py-3 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+        <div
+          class="px-6 py-3 border-b border-gray-200 bg-gray-50 flex-shrink-0"
+        >
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <label for="forkName" class="block text-xs font-medium text-gray-600 mb-1">Fork Name</label>
+              <label
+                for="forkName"
+                class="block text-xs font-medium text-gray-600 mb-1"
+                >Fork Name</label
+              >
               <input
                 type="text"
                 id="forkName"
@@ -188,29 +221,27 @@
             </div>
 
             <div>
-              <label for="forkLanguage" class="block text-xs font-medium text-gray-600 mb-1">Type</label>
+              <label
+                for="forkLanguage"
+                class="block text-xs font-medium text-gray-600 mb-1">Type</label
+              >
               <select
                 id="forkLanguage"
                 bind:value={forkLanguage}
                 class="w-full px-2 py-1.5 text-sm maas-input bg-white"
               >
-                <option value="auto">Auto-detect</option>
-                <option value="text">Plain Text</option>
-                <option value="markdown">Markdown</option>
-                <option value="html">HTML</option>
-                <option value="css">CSS</option>
-                <option value="json">JSON</option>
-                <option value="xml">XML</option>
-                <option value="javascript">JavaScript</option>
-                <option value="python">Python</option>
-                <option value="bash">Bash</option>
-                <option value="sql">SQL</option>
-                <option value="java">Java</option>
+                {#each syntaxOptions as option}
+                  <option value={option.value}>{option.label}</option>
+                {/each}
               </select>
             </div>
 
             <div>
-              <label for="forkAccessLevel" class="block text-xs font-medium text-gray-600 mb-1">Visibility</label>
+              <label
+                for="forkAccessLevel"
+                class="block text-xs font-medium text-gray-600 mb-1"
+                >Visibility</label
+              >
               <select
                 id="forkAccessLevel"
                 bind:value={forkAccessLevel}
@@ -222,7 +253,11 @@
             </div>
 
             <div>
-              <label for="forkExpiration" class="block text-xs font-medium text-gray-600 mb-1">Expires</label>
+              <label
+                for="forkExpiration"
+                class="block text-xs font-medium text-gray-600 mb-1"
+                >Expires</label
+              >
               <select
                 id="forkExpiration"
                 bind:value={forkExpiration}
@@ -241,7 +276,8 @@
             <div class="mt-2 text-xs text-gray-500">
               {#if relic?.name}
                 <span class="inline-flex items-center">
-                  <strong class="mr-1">Original:</strong> {relic.name}
+                  <strong class="mr-1">Original:</strong>
+                  {relic.name}
                 </span>
                 {#if relic?.content_type}
                   <span class="mx-2">•</span>
@@ -249,7 +285,8 @@
               {/if}
               {#if relic?.content_type}
                 <span class="inline-flex items-center">
-                  <strong class="mr-1">Type:</strong> {relic.content_type}
+                  <strong class="mr-1">Type:</strong>
+                  {relic.content_type}
                 </span>
               {/if}
             </div>
@@ -258,8 +295,12 @@
 
         <!-- Content Editor - Takes up most of the space -->
         <div class="flex-1 overflow-hidden flex flex-col">
-          <div class="px-6 pt-6 pb-2 flex items-center justify-between flex-shrink-0">
-            <label for="forkContent" class="text-sm font-medium text-gray-700">Content Editor</label>
+          <div
+            class="px-6 pt-6 pb-2 flex items-center justify-between flex-shrink-0"
+          >
+            <label for="forkContent" class="text-sm font-medium text-gray-700"
+              >Content Editor</label
+            >
             <div class="flex items-center gap-2">
               <!-- Character count -->
               <div class="text-sm text-gray-500">
@@ -269,9 +310,11 @@
               <!-- Expand Toggle -->
               <button
                 type="button"
-                on:click={() => isExpanded = !isExpanded}
-                class="px-2 py-1 rounded text-xs font-medium transition-colors {isExpanded ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}"
-                title={isExpanded ? 'Normal width' : 'Expand modal'}
+                on:click={() => (isExpanded = !isExpanded)}
+                class="px-2 py-1 rounded text-xs font-medium transition-colors {isExpanded
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}"
+                title={isExpanded ? "Normal width" : "Expand modal"}
               >
                 <i class="fas {isExpanded ? 'fa-compress' : 'fa-expand'}"></i>
               </button>
@@ -281,16 +324,20 @@
                 <div class="flex items-center gap-1">
                   <button
                     type="button"
-                    on:click={() => showPreview = false}
-                    class="px-2 py-1 rounded text-xs font-medium transition-colors {!showPreview ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}"
+                    on:click={() => (showPreview = false)}
+                    class="px-2 py-1 rounded text-xs font-medium transition-colors {!showPreview
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}"
                     title="Edit mode"
                   >
                     <i class="fas fa-edit"></i>
                   </button>
                   <button
                     type="button"
-                    on:click={() => showPreview = true}
-                    class="px-2 py-1 rounded text-xs font-medium transition-colors {showPreview ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}"
+                    on:click={() => (showPreview = true)}
+                    class="px-2 py-1 rounded text-xs font-medium transition-colors {showPreview
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}"
                     title="Preview mode"
                   >
                     <i class="fas fa-eye"></i>
@@ -301,12 +348,15 @@
           </div>
 
           <div class="flex-1 border-t border-gray-200 overflow-hidden">
-            {#if showPreview && forkLanguage === 'markdown'}
+            {#if showPreview && forkLanguage === "markdown"}
               <!-- Markdown Preview -->
-              <div class="h-full overflow-y-auto p-6 prose prose-sm max-w-none" on:wheel|stopPropagation>
+              <div
+                class="h-full overflow-y-auto p-6 prose prose-sm max-w-none"
+                on:wheel|stopPropagation
+              >
                 {@html renderMarkdown(editorContent)}
               </div>
-            {:else if showPreview && forkLanguage === 'html'}
+            {:else if showPreview && forkLanguage === "html"}
               <!-- HTML Preview -->
               <div class="h-full overflow-hidden" on:wheel|stopPropagation>
                 <iframe
@@ -320,7 +370,7 @@
               <!-- Editor Mode -->
               <MonacoEditor
                 value={editorContent}
-                language={forkLanguage === 'auto' ? 'plaintext' : forkLanguage}
+                language={forkLanguage === "auto" ? "plaintext" : forkLanguage}
                 readOnly={false}
                 height="calc(90vh - 280px)"
                 noWrapper={true}
@@ -328,17 +378,21 @@
               />
             {/if}
           </div>
-          <div class="px-6 pb-6 pt-2 text-xs text-gray-500 text-center flex-shrink-0">
+          <div
+            class="px-6 pb-6 pt-2 text-xs text-gray-500 text-center flex-shrink-0"
+          >
             <i class="fas fa-info-circle text-teal-600 mr-1"></i>
             Edit the content above to customize your fork
           </div>
         </div>
 
         <!-- Actions -->
-        <div class="px-6 py-3 border-t border-gray-200 bg-gray-50 flex-shrink-0">
+        <div
+          class="px-6 py-3 border-t border-gray-200 bg-gray-50 flex-shrink-0"
+        >
           <div class="flex justify-between items-center">
             <div class="text-xs text-gray-500">
-              {#if forkAccessLevel === 'public'}
+              {#if forkAccessLevel === "public"}
                 <i class="fas fa-globe mr-1" style="color: #217db1;"></i>
                 Public fork - anyone can view
               {:else}

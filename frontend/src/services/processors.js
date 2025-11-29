@@ -5,40 +5,7 @@
 
 import hljs from 'highlight.js'
 import { processMarkdown } from './markdownProcessor.js'
-
-/**
- * Determine if a content type should be treated as code
- */
-function shouldTreatAsCode(contentType) {
-  // Explicit code content types
-  if (contentType.startsWith('application/') && [
-    'javascript', 'json', 'xml', 'yaml', 'yml', 'toml', 'ini', 'config',
-    'ld+json', 'hal+json', 'vnd.api+json', 'atom+xml', 'rss+xml'
-  ].some(ctype => contentType.includes(ctype))) {
-    return true
-  }
-
-  // Check for common code file patterns in content type
-  const codeIndicators = [
-    'code', 'script', 'source', 'json', 'xml', 'yaml', 'yml', 'toml',
-    'ini', 'config', 'css', 'scss', 'sass', 'less', 'stylus',
-    'python', 'javascript', 'java', 'c++', 'ruby', 'go', 'rust',
-    'php', 'perl', 'shell', 'bash', 'powershell', 'sql',
-    'dockerfile', 'makefile', 'typescript', 'coffeescript'
-  ]
-
-  if (codeIndicators.some(indicator => contentType.includes(indicator))) {
-    return true
-  }
-
-  // All text/* types except these specific ones
-  if (contentType.startsWith('text/')) {
-    const excludeTypes = ['text/markdown', 'text/html', 'text/csv']
-    return !excludeTypes.includes(contentType)
-  }
-
-  return false
-}
+import { detectLanguageHint, isCodeType } from './typeUtils.js'
 
 /**
  * Detect programming language from content
@@ -48,73 +15,10 @@ export function detectLanguage(content, contentType, languageHint) {
     return languageHint
   }
 
-  // Extract language from content type
-  if (contentType) {
-    const contentTypeLower = contentType.toLowerCase()
-
-    // Map content types to language names
-    const contentTypeMap = {
-      'application/json': 'json',
-      'text/json': 'json',
-      'text/css': 'css',
-      'text/scss': 'scss',
-      'text/sass': 'sass',
-      'text/less': 'less',
-      'text/xml': 'xml',
-      'application/xml': 'xml',
-      'text/x-yaml': 'yaml',
-      'application/yaml': 'yaml',
-      'application/x-yaml': 'yaml',
-      'text/x-python': 'python',
-      'application/x-python': 'python',
-      'text/x-php': 'php',
-      'application/x-php': 'php',
-      'text/x-ruby': 'ruby',
-      'application/x-ruby': 'ruby',
-      'text/x-go': 'go',
-      'text/x-rust': 'rust',
-      'text/x-typescript': 'typescript',
-      'application/x-typescript': 'typescript',
-      'text/x-java-source': 'java',
-      'text/x-c': 'c',
-      'text/x-c++': 'cpp',
-      'text/x-csrc': 'c',
-      'text/x-c++src': 'cpp',
-      'text/x-shellscript': 'bash',
-      'application/x-sh': 'bash',
-      'text/x-sql': 'sql',
-      'application/sql': 'sql',
-      'text/x-dockerfile': 'dockerfile',
-      'text/x-makefile': 'makefile'
-    }
-
-    // Exact match first
-    if (contentTypeMap[contentTypeLower]) {
-      return contentTypeMap[contentTypeLower]
-    }
-
-    // Pattern matching for content types
-    if (contentTypeLower.includes('json')) return 'json'
-    if (contentTypeLower.includes('css')) return 'css'
-    if (contentTypeLower.includes('scss')) return 'scss'
-    if (contentTypeLower.includes('sass')) return 'sass'
-    if (contentTypeLower.includes('less')) return 'less'
-    if (contentTypeLower.includes('xml')) return 'xml'
-    if (contentTypeLower.includes('yaml') || contentTypeLower.includes('yml')) return 'yaml'
-    if (contentTypeLower.includes('python')) return 'python'
-    if (contentTypeLower.includes('javascript') || contentTypeLower.includes('js')) return 'javascript'
-    if (contentTypeLower.includes('typescript') || contentTypeLower.includes('ts')) return 'typescript'
-    if (contentTypeLower.includes('java')) return 'java'
-    if (contentTypeLower.includes('php')) return 'php'
-    if (contentTypeLower.includes('ruby')) return 'ruby'
-    if (contentTypeLower.includes('go')) return 'go'
-    if (contentTypeLower.includes('rust')) return 'rust'
-    if (contentTypeLower.includes('c++') || contentTypeLower.includes('cpp')) return 'cpp'
-    if (contentTypeLower.includes('c ')) return 'c'
-    if (contentTypeLower.includes('bash') || contentTypeLower.includes('shell')) return 'bash'
-    if (contentTypeLower.includes('sql')) return 'sql'
-    if (contentTypeLower.includes('dockerfile')) return 'dockerfile'
-    if (contentTypeLower.includes('makefile')) return 'makefile'
+  // Try to detect from content type using our unified logic
+  const detected = detectLanguageHint(contentType)
+  if (detected && detected !== 'auto' && detected !== 'text') {
+    return detected
   }
 
   // Try to auto-detect based on content
@@ -271,7 +175,7 @@ export async function processContent(content, contentType, languageHint) {
   }
 
   // Code files
-  if (shouldTreatAsCode(contentTypeLower)) {
+  if (isCodeType(contentTypeLower)) {
     return processCode(content, contentType, languageHint)
   }
 

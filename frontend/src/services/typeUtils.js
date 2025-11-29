@@ -1,40 +1,189 @@
+// Centralized file type definitions
+const FILE_TYPES = [
+  {
+    syntax: 'javascript',
+    label: 'JavaScript',
+    icon: 'fa-brands fa-js',
+    mime: 'application/javascript',
+    extensions: ['js', 'jsx', 'mjs', 'cjs']
+  },
+  {
+    syntax: 'typescript',
+    label: 'TypeScript',
+    icon: 'fa-brands fa-js', // FontAwesome doesn't have TS specific icon yet, usually JS icon or custom
+    mime: 'application/x-typescript',
+    extensions: ['ts', 'tsx']
+  },
+  {
+    syntax: 'python',
+    label: 'Python',
+    icon: 'fa-brands fa-python',
+    mime: 'text/x-python',
+    extensions: ['py', 'pyx', 'pyi']
+  },
+  {
+    syntax: 'html',
+    label: 'HTML',
+    icon: 'fa-brands fa-html5',
+    mime: 'text/html',
+    extensions: ['html', 'htm']
+  },
+  {
+    syntax: 'css',
+    label: 'CSS',
+    icon: 'fa-brands fa-css3-alt',
+    mime: 'text/css',
+    extensions: ['css', 'scss', 'sass', 'less']
+  },
+  {
+    syntax: 'json',
+    label: 'JSON',
+    icon: 'fa-code',
+    mime: 'application/json',
+    extensions: ['json', 'jsonc']
+  },
+  {
+    syntax: 'markdown',
+    label: 'Markdown',
+    icon: 'fa-file-lines',
+    mime: 'text/markdown',
+    extensions: ['md', 'markdown']
+  },
+  {
+    syntax: 'xml',
+    label: 'XML',
+    icon: 'fa-code',
+    mime: 'application/xml',
+    extensions: ['xml', 'xsl', 'xslt']
+  },
+  {
+    syntax: 'yaml',
+    label: 'YAML',
+    icon: 'fa-code',
+    mime: 'application/x-yaml',
+    extensions: ['yaml', 'yml']
+  },
+  {
+    syntax: 'bash',
+    label: 'Bash',
+    icon: 'fa-terminal',
+    mime: 'text/x-shellscript',
+    extensions: ['sh', 'bash', 'zsh', 'fish']
+  },
+  {
+    syntax: 'sql',
+    label: 'SQL',
+    icon: 'fa-database',
+    mime: 'application/sql',
+    extensions: ['sql']
+  },
+  {
+    syntax: 'java',
+    label: 'Java',
+    icon: 'fa-brands fa-java',
+    mime: 'text/x-java-source',
+    extensions: ['java', 'class']
+  },
+  {
+    syntax: 'php',
+    label: 'PHP',
+    icon: 'fa-brands fa-php',
+    mime: 'application/x-php',
+    extensions: ['php']
+  },
+  {
+    syntax: 'ruby',
+    label: 'Ruby',
+    icon: 'fa-gem',
+    mime: 'application/x-ruby',
+    extensions: ['rb']
+  },
+  {
+    syntax: 'go',
+    label: 'Go',
+    icon: 'fa-brands fa-golang',
+    mime: 'text/x-go',
+    extensions: ['go']
+  },
+  {
+    syntax: 'rust',
+    label: 'Rust',
+    icon: 'fa-brands fa-rust',
+    mime: 'text/x-rust',
+    extensions: ['rs']
+  },
+  {
+    syntax: 'c',
+    label: 'C',
+    icon: 'fa-code',
+    mime: 'text/x-c',
+    extensions: ['c', 'h']
+  },
+  {
+    syntax: 'cpp',
+    label: 'C++',
+    icon: 'fa-code',
+    mime: 'text/x-c++',
+    extensions: ['cpp', 'cc', 'cxx', 'hpp']
+  },
+  {
+    syntax: 'dockerfile',
+    label: 'Dockerfile',
+    icon: 'fa-brands fa-docker',
+    mime: 'text/x-dockerfile',
+    extensions: ['dockerfile']
+  },
+  {
+    syntax: 'makefile',
+    label: 'Makefile',
+    icon: 'fa-file-code',
+    mime: 'text/x-makefile',
+    extensions: ['makefile']
+  },
+  {
+    syntax: 'text',
+    label: 'Text',
+    icon: 'fa-file-lines',
+    mime: 'text/plain',
+    extensions: ['txt', 'text', 'conf', 'log', 'ini']
+  }
+]
+
+// Fallback for unknown types
+const UNKNOWN_TYPE = {
+  syntax: 'auto',
+  label: 'Unknown',
+  icon: 'fa-file',
+  mime: 'application/octet-stream',
+  extensions: []
+}
+
 export function getTypeLabel(contentType) {
   if (!contentType) return 'Text'
-  if (contentType.includes('javascript')) return 'JavaScript'
-  if (contentType.includes('python')) return 'Python'
-  if (contentType.includes('html')) return 'HTML'
-  if (contentType.includes('css')) return 'CSS'
-  if (contentType.includes('json')) return 'JSON'
-  if (contentType.includes('markdown')) return 'Markdown'
-  if (contentType.includes('xml')) return 'XML'
-  if (contentType.includes('bash') || contentType.includes('shell')) return 'Bash'
-  if (contentType.includes('sql')) return 'SQL'
-  if (contentType.includes('java')) return 'Java'
+  const type = FILE_TYPES.find(t => contentType.includes(t.syntax) || contentType === t.mime)
+
+  // Special cases for generic matches that might not be in FILE_TYPES or need partial matching
+  if (type) return type.label
   if (contentType.includes('pdf')) return 'PDF'
   if (contentType.includes('image')) return 'Image'
   if (contentType.includes('csv')) return 'CSV'
   if (contentType.includes('zip') || contentType.includes('archive') || contentType.includes('tar') || contentType.includes('gzip')) return 'Archive'
   if (contentType.includes('text')) return 'Text'
+
   return 'Unknown'
 }
 
 export function getTypeIcon(contentType) {
   if (!contentType) return 'fa-file'
-  if (contentType.includes('javascript')) return 'fa-brands fa-js'
-  if (contentType.includes('python')) return 'fa-brands fa-python'
-  if (contentType.includes('html')) return 'fa-brands fa-html5'
-  if (contentType.includes('css')) return 'fa-brands fa-css3-alt'
-  if (contentType.includes('json')) return 'fa-code'
-  if (contentType.includes('markdown')) return 'fa-file-lines'
-  if (contentType.includes('xml')) return 'fa-code'
-  if (contentType.includes('bash') || contentType.includes('shell')) return 'fa-terminal'
-  if (contentType.includes('sql')) return 'fa-database'
-  if (contentType.includes('java')) return 'fa-brands fa-java'
+  const type = FILE_TYPES.find(t => contentType.includes(t.syntax) || contentType === t.mime)
+
+  if (type) return type.icon
   if (contentType.includes('pdf')) return 'fa-file-pdf'
   if (contentType.includes('image')) return 'fa-image'
   if (contentType.includes('csv')) return 'fa-file-csv'
   if (contentType.includes('zip') || contentType.includes('archive') || contentType.includes('tar') || contentType.includes('gzip')) return 'fa-file-zipper'
   if (contentType.includes('text')) return 'fa-file-lines'
+
   return 'fa-file'
 }
 
@@ -53,55 +202,79 @@ export function formatBytes(bytes, decimals = 2) {
 
 // Map type selections to MIME types
 export function getContentType(syntax) {
-  const mimeTypes = {
-    'text': 'text/plain',
-    'markdown': 'text/markdown',
-    'html': 'text/html',
-    'json': 'application/json',
-    'xml': 'application/xml',
-    'javascript': 'application/javascript',
-    'python': 'text/x-python',
-    'bash': 'text/x-shellscript',
-    'sql': 'application/sql',
-    'css': 'text/css',
-    'java': 'text/x-java-source'
-  }
-  return mimeTypes[syntax] || 'text/plain'
+  const type = FILE_TYPES.find(t => t.syntax === syntax)
+  return type ? type.mime : 'text/plain'
 }
 
 // Map language selection to file extensions
 export function getFileExtension(syntax) {
-  const extensions = {
-    'text': 'txt',
-    'markdown': 'md',
-    'html': 'html',
-    'json': 'json',
-    'xml': 'xml',
-    'javascript': 'js',
-    'python': 'py',
-    'bash': 'sh',
-    'sql': 'sql',
-    'css': 'css',
-    'java': 'java'
-  }
-  return extensions[syntax] || 'txt'
+  const type = FILE_TYPES.find(t => t.syntax === syntax)
+  return type ? type.extensions[0] : 'txt'
 }
 
 // Auto-detect language hint from content type
 export function detectLanguageHint(contentType) {
-  const typeToLanguage = {
-    'text/markdown': 'markdown',
-    'text/html': 'html',
-    'application/json': 'json',
-    'application/xml': 'xml',
-    'application/javascript': 'javascript',
-    'text/x-python': 'python',
-    'text/x-shellscript': 'bash',
-    'application/sql': 'sql',
-    'text/css': 'css',
-    'text/x-java-source': 'java'
+  if (!contentType) return 'auto'
+  const lowerType = contentType.toLowerCase()
+  const type = FILE_TYPES.find(t => lowerType.includes(t.syntax) || lowerType === t.mime)
+  return type ? type.syntax : 'auto'
+}
+
+// Get syntax from file extension
+export function getSyntaxFromExtension(extension) {
+  if (!extension) return null
+  const ext = extension.toLowerCase()
+  const type = FILE_TYPES.find(t => t.extensions.includes(ext))
+  return type ? type.syntax : null
+}
+
+// Check if content type is a code type
+export function isCodeType(contentType) {
+  if (!contentType) return false
+  const lowerType = contentType.toLowerCase()
+
+  // Check against our known types (excluding text, though text might be code-ish, usually we want highlighting for specific syntaxes)
+  const type = FILE_TYPES.find(t => lowerType.includes(t.syntax) || lowerType === t.mime)
+  if (type && type.syntax !== 'text') return true
+
+  // Fallback checks for other common code indicators
+  if (lowerType.includes('json') ||
+    lowerType.includes('xml') ||
+    lowerType.includes('script') ||
+    lowerType.includes('source')) {
+    return true
   }
-  return typeToLanguage[contentType] || 'auto'
+
+  return false
+}
+
+// Get all available syntax options for forms
+export function getAvailableSyntaxOptions() {
+  // Return only the most common ones used in forms, in a user-friendly order
+  return [
+    { value: 'auto', label: 'Auto-detect' },
+    { value: 'text', label: 'Plain Text' },
+    { value: 'markdown', label: 'Markdown' },
+    { value: 'html', label: 'HTML' },
+    { value: 'css', label: 'CSS' },
+    { value: 'javascript', label: 'JavaScript' },
+    { value: 'typescript', label: 'TypeScript' },
+    { value: 'python', label: 'Python' },
+    { value: 'java', label: 'Java' },
+    { value: 'go', label: 'Go' },
+    { value: 'rust', label: 'Rust' },
+    { value: 'c', label: 'C' },
+    { value: 'cpp', label: 'C++' },
+    { value: 'php', label: 'PHP' },
+    { value: 'ruby', label: 'Ruby' },
+    { value: 'bash', label: 'Bash' },
+    { value: 'sql', label: 'SQL' },
+    { value: 'json', label: 'JSON' },
+    { value: 'xml', label: 'XML' },
+    { value: 'yaml', label: 'YAML' },
+    { value: 'dockerfile', label: 'Dockerfile' },
+    { value: 'makefile', label: 'Makefile' }
+  ]
 }
 
 // Format time ago string
