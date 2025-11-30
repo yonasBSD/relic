@@ -91,7 +91,6 @@
         <thead>
           <tr class="text-gray-500 uppercase text-xs tracking-wider bg-gray-50">
             <th>{columnHeaders.title}</th>
-            <th>{columnHeaders.type}</th>
             <th>{getDateColumnHeader()}</th>
             <th>{columnHeaders.size}</th>
             <th class="w-40">{columnHeaders.actions}</th>
@@ -101,10 +100,10 @@
           {#each paginatedData as relic (relic.id)}
             <tr class="hover:bg-gray-50 cursor-pointer">
               <td>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1.5">
                   <!-- Status indicators -->
                   {#if tableId !== 'recent-relics'}
-                    <div class="flex items-center gap-1 flex-shrink-0">
+                    <div class="flex items-center gap-0.5 flex-shrink-0">
                       {#if relic.access_level === 'private'}
                         <i class="fas fa-lock text-xs" style="color: #76306c;" title="Private - accessible only via URL"></i>
                       {:else if relic.access_level === 'public'}
@@ -112,7 +111,8 @@
                       {/if}
                     </div>
                   {/if}
-                  <a href="/{relic.id}" class="font-medium text-[#0066cc] hover:underline flex-1">
+                  <i class="fas {getTypeIcon(relic.content_type)} {getTypeIconColor(relic.content_type)} text-sm flex-shrink-0" title={getTypeLabel(relic.content_type)}></i>
+                  <a href="/{relic.id}" class="font-medium text-[#0066cc] hover:underline truncate flex-1">
                     {relic.name || 'Untitled'}
                   </a>
                 </div>
@@ -129,9 +129,6 @@
                     </button>
                   </div>
                 </div>
-              </td>
-              <td class="text-xs">
-                <span class="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs">{getTypeLabel(relic.content_type)}</span>
               </td>
               <td class="text-gray-500 text-xs">
                 {formatTimeAgo(getDateField(relic))}
