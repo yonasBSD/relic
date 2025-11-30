@@ -216,17 +216,7 @@
   </script>
 
 <style>
-  :global(.monaco-container .line-numbers) {
-    color: #6b7280 !important;
-  }
-
-  :global(.monaco-editor .line-numbers) {
-    color: #6b7280 !important;
-  }
-
-  :global(.monaco-editor .view-line .line-number) {
-    color: #6b7280 !important;
-  }
+  /* Removed Monaco overrides to allow component styling to take precedence */
 </style>
 
 {#if loading}

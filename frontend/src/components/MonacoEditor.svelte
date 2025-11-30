@@ -42,22 +42,53 @@
     }
 
     try {
+      // Define relic theme
+      monaco.editor.defineTheme('relic-theme', {
+        base: 'vs',
+        inherit: true,
+        rules: [
+          { token: '', foreground: '374151' } // gray-700 (matches oklch(0.278...) better than gray-800)
+        ],
+        colors: {
+          'editor.lineHighlightBackground': '#f3f4f6', // gray-100
+          'editorLineNumber.foreground': '#9ca3af', // gray-400 (lighter to match mock)
+          'editorLineNumber.activeForeground': '#374151', // gray-700
+          'scrollbarSlider.background': '#cccccc',
+          'scrollbarSlider.hoverBackground': '#b3b3b3',
+          'scrollbarSlider.activeBackground': '#999999',
+          'editor.selectionBackground': '#e5e7eb' // Lighter selection
+        }
+      })
+
       editor = monaco.editor.create(container, {
         value: value || '',
         language: language || 'plaintext',
         readOnly,
-        theme: 'vs',
+        theme: 'relic-theme',
         automaticLayout: true,
         minimap: { enabled: false },
+        folding: false,
+        guides: { indentation: false },
         scrollBeyondLastLine: false,
         wordWrap: 'on',
         lineNumbers: 'on',
         fontSize: 13,
-        fontFamily: '"Courier New", monospace',
+        lineHeight: 24,
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
         padding: { top: 16, bottom: 16 },
         glyphMargin: true,
         lineDecorationsWidth: 8,
         lineNumbersMinChars: 4,
+        renderLineHighlight: 'none', // Cleaner look
+        overviewRulerBorder: false,
+        hideCursorInOverviewRuler: true,
+        scrollbar: {
+          vertical: 'visible',
+          horizontal: 'visible',
+          useShadows: false,
+          verticalScrollbarSize: 8,
+          horizontalScrollbarSize: 8
+        },
         // Enable semantic highlighting with built-in tokenization
         'editor.semanticHighlighting.enabled': 'configuredByTheme',
         // Keep syntax highlighting without language services
