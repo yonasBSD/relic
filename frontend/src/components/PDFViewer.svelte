@@ -24,6 +24,23 @@
   $: canGoPrev = currentPage > 1
   $: canGoNext = currentPage < numPages
 
+  // Export control methods for parent component
+  export function getState() {
+    return { currentPage, numPages, scale, loading }
+  }
+
+  export function zoomInMethod() {
+    zoomIn()
+  }
+
+  export function zoomOutMethod() {
+    zoomOut()
+  }
+
+  export function resetZoomMethod() {
+    resetZoom()
+  }
+
   // Render all pages when PDF document is loaded
   $: if (pdfDocument && canvasElements.length > 0) {
     renderAllPages()
@@ -74,7 +91,6 @@
     for (let i = 0; i < canvasElements.length; i++) {
       const canvas = canvasElements[i]
       if (canvas) {
-        const rect = canvas.getBoundingClientRect()
         const canvasTop = canvas.offsetTop
         const canvasBottom = canvasTop + canvas.height
 
@@ -94,22 +110,6 @@
       top: canvas.offsetTop - 20,
       behavior: 'smooth'
     })
-  }
-
-  function nextPage() {
-    if (canGoNext) currentPage++
-  }
-
-  function prevPage() {
-    if (canGoPrev) currentPage--
-  }
-
-  function goToPage(page) {
-    const pageNum = parseInt(page)
-    if (pageNum >= 1 && pageNum <= numPages) {
-      currentPage = pageNum
-      scrollToPage(pageNum)
-    }
   }
 
   function zoomIn() {
@@ -174,16 +174,24 @@
 
     if (event.key === 'ArrowLeft' || event.key === 'PageUp') {
       event.preventDefault()
-      prevPage()
+      if (canGoPrev) {
+        currentPage--
+        scrollToPage(currentPage)
+      }
     } else if (event.key === 'ArrowRight' || event.key === 'PageDown') {
       event.preventDefault()
-      nextPage()
+      if (canGoNext) {
+        currentPage++
+        scrollToPage(currentPage)
+      }
     } else if (event.key === 'Home') {
       event.preventDefault()
       currentPage = 1
+      scrollToPage(1)
     } else if (event.key === 'End') {
       event.preventDefault()
       currentPage = numPages
+      scrollToPage(numPages)
     } else if (event.key === '+' || event.key === '=') {
       event.preventDefault()
       zoomIn()
@@ -275,51 +283,6 @@
 {/if}
 
 {#if pdfDocument}
-  <!-- Controls Bar -->
-  <div class="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between flex-wrap gap-3">
-    <!-- Page Counter -->
-    <div class="text-sm text-gray-700">
-      <span class="font-medium">Page {currentPage}</span>
-      <span class="text-gray-500"> of {numPages}</span>
-    </div>
-
-    <!-- Zoom Controls -->
-    <div class="flex items-center gap-2">
-      <button
-        on:click={zoomOut}
-        class="px-2 py-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
-        title="Zoom out (-)"
-      >
-        <i class="fas fa-search-minus"></i>
-      </button>
-      <span class="text-sm text-gray-700 font-mono min-w-[4rem] text-center">
-        {Math.round(scale * 100)}%
-      </span>
-      <button
-        on:click={zoomIn}
-        class="px-2 py-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
-        title="Zoom in (+)"
-      >
-        <i class="fas fa-search-plus"></i>
-      </button>
-      <button
-        on:click={resetZoom}
-        class="px-2 py-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors text-xs"
-        title="Reset zoom (0)"
-      >
-        Reset
-      </button>
-    </div>
-
-    <!-- PDF Metadata -->
-    {#if metadata.title}
-      <div class="text-sm text-gray-600 truncate max-w-xs">
-        <i class="fas fa-file-pdf text-red-600 mr-1"></i>
-        {metadata.title}
-      </div>
-    {/if}
-  </div>
-
   <!-- PDF Canvas Container - Continuous Scroll -->
   <div
     bind:this={scrollContainer}

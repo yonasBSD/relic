@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from 'svelte'
+  import { onMount, onDestroy } from 'svelte'
   import { getRelic, getRelicRaw, addBookmark, removeBookmark, checkBookmark } from '../services/api'
   import { processContent } from '../services/processors'
   import { showToast } from '../stores/toastStore'
@@ -25,6 +25,24 @@
   let bookmarkLoading = false
   let showForkModal = false
   let forkLoading = false
+  let pdfViewerRef = null
+  let pdfState = { currentPage: 1, numPages: 0, scale: 1.5, loading: false }
+
+  // Update PDF state periodically
+  let pdfStateInterval
+  $: if (processed?.type === 'pdf' && pdfViewerRef) {
+    if (pdfStateInterval) clearInterval(pdfStateInterval)
+    pdfStateInterval = setInterval(() => {
+      if (pdfViewerRef && pdfViewerRef.getState) {
+        pdfState = pdfViewerRef.getState()
+      }
+    }, 100)
+  } else {
+    if (pdfStateInterval) {
+      clearInterval(pdfStateInterval)
+      pdfStateInterval = null
+    }
+  }
 
   // Initialize from localStorage immediately
   let isFullWidth = (() => {
@@ -210,6 +228,12 @@
   function handleMultiLineSelected(event) {
     // No toast needed for multi-line selection - the URL update is sufficient
   }
+
+  onDestroy(() => {
+    if (pdfStateInterval) {
+      clearInterval(pdfStateInterval)
+    }
+  })
 
   </script>
 
@@ -397,6 +421,36 @@
             </div>
           {/if}
 
+          <!-- PDF Controls -->
+          {#if processed?.type === 'pdf'}
+            <div class="flex items-center gap-1 border-l border-gray-300 pl-2 ml-2">
+              <button
+                on:click={() => pdfViewerRef?.zoomOutMethod()}
+                class="px-2 py-1 rounded text-xs font-medium transition-colors text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                title="Zoom out (-)"
+              >
+                <i class="fas fa-search-minus"></i>
+              </button>
+              <span class="text-xs text-gray-700 font-mono min-w-[3rem] text-center">
+                {Math.round(pdfState.scale * 100)}%
+              </span>
+              <button
+                on:click={() => pdfViewerRef?.zoomInMethod()}
+                class="px-2 py-1 rounded text-xs font-medium transition-colors text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                title="Zoom in (+)"
+              >
+                <i class="fas fa-search-plus"></i>
+              </button>
+              <button
+                on:click={() => pdfViewerRef?.resetZoomMethod()}
+                class="px-2 py-1 rounded text-xs font-medium transition-colors text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                title="Reset zoom (0)"
+              >
+                <i class="fas fa-undo text-[10px]"></i>
+              </button>
+            </div>
+          {/if}
+
           <!-- Preview/Source Tabs (for Markdown and HTML) -->
           {#if processed?.type === 'markdown'}
             <div class="flex items-center gap-1">
@@ -547,6 +601,7 @@
         {:else if processed.type === 'pdf'}
           <div class="border-t border-gray-200">
             <PDFViewer
+              bind:this={pdfViewerRef}
               pdfDocument={processed.pdfDocument}
               metadata={processed.metadata}
               passwordRequired={processed.passwordRequired}
