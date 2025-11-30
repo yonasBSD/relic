@@ -5,6 +5,7 @@
 
 import hljs from 'highlight.js'
 import { processMarkdown } from './markdownProcessor.js'
+import { processPDF } from './pdfProcessor.js'
 import { detectLanguageHint, isCodeType } from './typeUtils.js'
 
 /**
@@ -174,9 +175,9 @@ export async function processContent(content, contentType, languageHint) {
     return processMarkdown(content)
   }
 
-  // Code files
-  if (isCodeType(contentTypeLower)) {
-    return processCode(content, contentType, languageHint)
+  // PDFs (check BEFORE code files to prevent Monaco display)
+  if (contentTypeLower.includes('pdf') || contentTypeLower.includes('application/pdf')) {
+    return processPDF(content)
   }
 
   // CSV
@@ -187,6 +188,11 @@ export async function processContent(content, contentType, languageHint) {
   // Images
   if (contentTypeLower.includes('image')) {
     return processImage(content)
+  }
+
+  // Code files
+  if (isCodeType(contentTypeLower)) {
+    return processCode(content, contentType, languageHint)
   }
 
   // Text (fallback)

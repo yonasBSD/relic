@@ -146,6 +146,13 @@ const FILE_TYPES = [
     icon: 'fa-file-lines',
     mime: 'text/plain',
     extensions: ['txt', 'text', 'conf', 'log', 'ini']
+  },
+  {
+    syntax: 'pdf',
+    label: 'PDF',
+    icon: 'fa-file-pdf',
+    mime: 'application/pdf',
+    extensions: ['pdf']
   }
 ]
 
@@ -160,29 +167,54 @@ const UNKNOWN_TYPE = {
 
 export function getTypeLabel(contentType) {
   if (!contentType) return 'Text'
-  const type = FILE_TYPES.find(t => contentType.includes(t.syntax) || contentType === t.mime)
 
-  // Special cases for generic matches that might not be in FILE_TYPES or need partial matching
-  if (type) return type.label
-  if (contentType.includes('pdf')) return 'PDF'
-  if (contentType.includes('image')) return 'Image'
-  if (contentType.includes('csv')) return 'CSV'
-  if (contentType.includes('zip') || contentType.includes('archive') || contentType.includes('tar') || contentType.includes('gzip')) return 'Archive'
-  if (contentType.includes('text')) return 'Text'
+  const lowerType = contentType.toLowerCase()
+
+  // First, try exact MIME type match
+  const exactMatch = FILE_TYPES.find(t => lowerType === t.mime.toLowerCase())
+  if (exactMatch) return exactMatch.label
+
+  // Then try partial MIME type match (for variations like text/html; charset=utf-8)
+  const mimeMatch = FILE_TYPES.find(t => lowerType.startsWith(t.mime.toLowerCase()))
+  if (mimeMatch) return mimeMatch.label
+
+  // Special cases for generic matches
+  if (lowerType.includes('pdf')) return 'PDF'
+  if (lowerType.includes('image')) return 'Image'
+  if (lowerType.includes('csv')) return 'CSV'
+  if (lowerType.includes('zip') || lowerType.includes('archive') || lowerType.includes('tar') || lowerType.includes('gzip')) return 'Archive'
+  if (lowerType.includes('text')) return 'Text'
+
+  // Finally, try syntax substring match (less reliable, but catches some edge cases)
+  const syntaxMatch = FILE_TYPES.find(t => lowerType.includes(t.syntax) && t.syntax.length > 2)
+  if (syntaxMatch) return syntaxMatch.label
 
   return 'Unknown'
 }
 
 export function getTypeIcon(contentType) {
   if (!contentType) return 'fa-file'
-  const type = FILE_TYPES.find(t => contentType.includes(t.syntax) || contentType === t.mime)
 
-  if (type) return type.icon
-  if (contentType.includes('pdf')) return 'fa-file-pdf'
-  if (contentType.includes('image')) return 'fa-image'
-  if (contentType.includes('csv')) return 'fa-file-csv'
-  if (contentType.includes('zip') || contentType.includes('archive') || contentType.includes('tar') || contentType.includes('gzip')) return 'fa-file-zipper'
-  if (contentType.includes('text')) return 'fa-file-lines'
+  const lowerType = contentType.toLowerCase()
+
+  // First, try exact MIME type match
+  const exactMatch = FILE_TYPES.find(t => lowerType === t.mime.toLowerCase())
+  if (exactMatch) return exactMatch.icon
+
+  // Then try partial MIME type match
+  const mimeMatch = FILE_TYPES.find(t => lowerType.startsWith(t.mime.toLowerCase()))
+  if (mimeMatch) return mimeMatch.icon
+
+  // Special cases
+  if (lowerType.includes('pdf')) return 'fa-file-pdf'
+  if (lowerType.includes('image')) return 'fa-image'
+  if (lowerType.includes('csv')) return 'fa-file-csv'
+  if (lowerType.includes('zip') || lowerType.includes('archive') || lowerType.includes('tar') || lowerType.includes('gzip')) return 'fa-file-zipper'
+  if (lowerType.includes('text')) return 'fa-file-lines'
+
+  // Finally, try syntax substring match (only for longer syntax strings)
+  const syntaxMatch = FILE_TYPES.find(t => lowerType.includes(t.syntax) && t.syntax.length > 2)
+  if (syntaxMatch) return syntaxMatch.icon
 
   return 'fa-file'
 }
@@ -255,6 +287,7 @@ export function getAvailableSyntaxOptions() {
     { value: 'auto', label: 'Auto-detect' },
     { value: 'text', label: 'Plain Text' },
     { value: 'markdown', label: 'Markdown' },
+    { value: 'pdf', label: 'PDF' },
     { value: 'html', label: 'HTML' },
     { value: 'css', label: 'CSS' },
     { value: 'javascript', label: 'JavaScript' },

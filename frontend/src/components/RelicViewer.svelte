@@ -7,6 +7,7 @@
   import { getTypeLabel, getTypeIcon, getTypeIconColor } from '../services/typeUtils'
   import MonacoEditor from './MonacoEditor.svelte'
   import ForkModal from './ForkModal.svelte'
+  import PDFViewer from './PDFViewer.svelte'
   import { createEventDispatcher } from 'svelte'
   import { getCurrentLineNumberFragment } from '../utils/lineNumbers'
 
@@ -542,6 +543,15 @@
         {:else if processed.type === 'image'}
           <div class="border-t border-gray-200 p-6">
             <img src={processed.url} alt={relic.name} class="max-w-full h-auto rounded" />
+          </div>
+        {:else if processed.type === 'pdf'}
+          <div class="border-t border-gray-200">
+            <PDFViewer
+              pdfDocument={processed.pdfDocument}
+              metadata={processed.metadata}
+              passwordRequired={processed.passwordRequired}
+              relicId={relicId}
+            />
           </div>
         {:else if processed.type === 'csv'}
           <div class="border-t border-gray-200 p-6">

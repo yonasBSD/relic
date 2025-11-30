@@ -6,6 +6,9 @@ const backendUrl = process.env.VITE_API_URL || 'http://localhost:8000'
 
 export default defineConfig({
   plugins: [svelte()],
+  optimizeDeps: {
+    include: ['pdfjs-dist']
+  },
   server: {
     middlewares: [
       {
