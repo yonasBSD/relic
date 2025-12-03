@@ -116,8 +116,8 @@ perform_sync() {
 
         log "Starting sync (attempt $attempt/$MAX_RETRIES)..."
 
-        # Perform the mirror operation
-        if mc mirror --overwrite --remove "source/${MINIO_BUCKET}" "dest/${S3_BUCKET}" 2>&1; then
+        # Perform the mirror operation (no --remove: archive mode keeps all S3 data)
+        if mc mirror --overwrite "source/${MINIO_BUCKET}" "dest/${S3_BUCKET}" 2>&1; then
             log_success "Sync completed successfully"
             success=true
             return 0
