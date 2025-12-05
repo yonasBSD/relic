@@ -1,7 +1,7 @@
 services:
   # Frontend (Nginx + Static Files)
   frontend:
-    image: ghcr.io/jules-dot-dev/relic/frontend:latest
+    image: ghcr.io/ovidiuvio/relic/frontend:latest
     container_name: Relic-frontend
     ports:
       - "80:80"
@@ -13,7 +13,7 @@ services:
 
   # Backend API Service
   backend:
-    image: ghcr.io/jules-dot-dev/relic/backend:latest
+    image: ghcr.io/ovidiuvio/relic/backend:latest
     container_name: Relic-backend
     expose:
       - "8000"
@@ -87,7 +87,7 @@ services:
 
   # S3 Bucket Sync Service
   s3-sync:
-    image: ghcr.io/jules-dot-dev/relic/s3-sync:latest
+    image: ghcr.io/ovidiuvio/relic/s3-sync:latest
     container_name: Relic-s3-sync
     environment:
       # Source (MinIO)
