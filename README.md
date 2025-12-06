@@ -4,11 +4,11 @@ A modern, feature-rich artifact service with immutable relics, complete version 
 
 ## Features
 
-- **Immutable Artifacts**: Each relic is permanent. Edits create new versions with complete history preserved.
-- **Version Lineage**: Track complete history through parent-child relationships and fork support.
+- **Immutable Artifacts**: Each relic is permanent. Edits create new versions via forking with complete history preserved.
+- **Version Lineage**: Track complete history through parent-child relationships (forks).
 - **Universal Content Support**: Text, code, images, PDFs, CSV/Excel, archives, and more.
 - **Smart Processing**: Automatic syntax highlighting, thumbnail generation, metadata extraction.
-- **Diff Support**: Compare any two relics with full diff output.
+
 - **Access Control**: Public, unlisted, and private relics with optional password protection.
 - **Expiration**: Set relics to expire after 1h, 24h, 7d, 30d, or never.
 - **Soft Delete**: Deleted relics are recoverable and don't break version chains.
