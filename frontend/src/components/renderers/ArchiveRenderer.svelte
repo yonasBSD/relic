@@ -1,4 +1,5 @@
 <script>
+  import { onDestroy } from 'svelte'
   import { processContent } from '../../services/processors.js'
   import CodeRenderer from './CodeRenderer.svelte'
   import ImageRenderer from './ImageRenderer.svelte'
@@ -19,6 +20,63 @@
   let loading = false
   let error = null
   let expandedDirs = new Set(['', '/']) // Support both empty string and '/' for root
+
+  // Resizable panel state
+  let sidebarWidth = parseInt(localStorage.getItem('archiveSidebarWidth') || '400')
+  let isDragging = false
+  let containerRef
+
+  // Handle resize divider drag
+  function startDrag(e) {
+    isDragging = true
+    e.preventDefault()
+  }
+
+  function handleDrag(e) {
+    if (!isDragging || !containerRef) return
+
+    const containerRect = containerRef.getBoundingClientRect()
+    const newWidth = Math.max(200, Math.min(e.clientX - containerRect.left, containerRect.width - 300))
+    sidebarWidth = newWidth
+    localStorage.setItem('archiveSidebarWidth', newWidth.toString())
+  }
+
+  function stopDrag() {
+    isDragging = false
+  }
+
+  // Handle keyboard resize (accessibility)
+  function handleKeydown(e) {
+    if (e.key === 'ArrowLeft') {
+      sidebarWidth = Math.max(200, sidebarWidth - 20)
+      localStorage.setItem('archiveSidebarWidth', sidebarWidth.toString())
+      e.preventDefault()
+    } else if (e.key === 'ArrowRight') {
+      const maxWidth = containerRef ? containerRef.getBoundingClientRect().width - 300 : 800
+      sidebarWidth = Math.min(maxWidth, sidebarWidth + 20)
+      localStorage.setItem('archiveSidebarWidth', sidebarWidth.toString())
+      e.preventDefault()
+    }
+  }
+
+  // Attach global listeners for drag
+  $: if (typeof window !== 'undefined') {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleDrag)
+      window.addEventListener('mouseup', stopDrag)
+    } else {
+      window.removeEventListener('mousemove', handleDrag)
+      window.removeEventListener('mouseup', stopDrag)
+    }
+  }
+
+  // Cleanup on component destroy
+  onDestroy(() => {
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('mousemove', handleDrag)
+      window.removeEventListener('mouseup', stopDrag)
+    }
+  })
 
   // Toggle directory expansion
   function toggleDirectory(path) {
@@ -174,9 +232,9 @@
 </script>
 
 <div class="border-t border-gray-200">
-  <div class="grid grid-cols-1 lg:grid-cols-3 divide-x divide-gray-200">
+  <div bind:this={containerRef} class="flex divide-x divide-gray-200 relative" style="user-select: {isDragging ? 'none' : 'auto'}">
     <!-- File tree sidebar -->
-    <div class="lg:col-span-1 bg-gray-50 max-h-[calc(100vh-300px)] overflow-y-auto">
+    <div class="bg-gray-50 max-h-[calc(100vh-300px)] overflow-y-auto flex-shrink-0" style="width: {sidebarWidth}px">
       <!-- Archive metadata header -->
       <div class="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 z-10">
         <div class="flex items-center justify-between mb-2">
@@ -222,8 +280,21 @@
       </div>
     </div>
 
+    <!-- Resize divider -->
+    <div
+      class="w-1 bg-gray-200 hover:bg-blue-500 cursor-col-resize flex-shrink-0 transition-colors relative group"
+      on:mousedown={startDrag}
+      on:keydown={handleKeydown}
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Resize sidebar"
+      tabindex="0"
+    >
+      <div class="absolute inset-y-0 -left-1 -right-1 group-hover:bg-blue-500/10"></div>
+    </div>
+
     <!-- File preview area -->
-    <div class="lg:col-span-2 bg-white">
+    <div class="flex-1 bg-white min-w-0">
       {#if !selectedFile}
         <div class="flex items-center justify-center h-[calc(100vh-300px)] text-gray-500">
           <div class="text-center">
