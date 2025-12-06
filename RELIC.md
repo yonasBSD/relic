@@ -95,7 +95,67 @@ Lineage tracked: f47ac... → a1b2c... → 12345...
 - Total size, file count
 - Preview without extraction
 
-### 5. Diff & Comparison
+**Relic Indexes (.rix):**
+- Curated collections of relics
+- Custom titles and descriptions
+- Metadata overrides per relic
+- Progressive batch loading
+- Full search and pagination
+- YAML or simple list format
+
+### 5. Relic Indexes
+
+**Concept:**
+Relic indexes are special files (`.rix` extension) that define collections of relics. They allow users to create curated lists with custom metadata, similar to playlists or reading lists.
+
+**File Format:**
+- MIME type: `application/x-relic-index`
+- Extension: `.rix`
+- Content: YAML or plain text
+
+**Structured Format (YAML):**
+```yaml
+title: Collection Title
+description: Optional description of this collection
+relics:
+  - id: f47ac10b58cc4372a5670e02b2c3d479
+    title: Optional title override
+    description: Optional description override
+    tags: [tag1, tag2]
+  - id: a1b2c3d4e5f678901234567890abcdef
+  - id: 1234567890abcdef1234567890abcdef
+```
+
+**Simple Format (plain list):**
+```
+f47ac10b58cc4372a5670e02b2c3d479
+a1b2c3d4e5f678901234567890abcdef
+1234567890abcdef1234567890abcdef
+```
+
+**Processing:**
+- Auto-detect format (structured vs simple)
+- Extract relic IDs using regex pattern: `[a-f0-9]{32}`
+- Parse metadata overrides (title, description, tags)
+- Fetch each relic in batches (5 at a time)
+- Apply overrides to fetched relic data
+- Display in table with full functionality
+
+**UI Features:**
+- Progressive loading with progress indicator
+- Full search and pagination support
+- All standard relic actions (share, copy, download, fork)
+- Error handling for missing/invalid relics
+- Responsive table layout
+
+**Use Cases:**
+- Project documentation collections
+- Code snippet libraries
+- Tutorial series
+- Resource lists
+- Bookmarked favorites with notes
+
+### 6. Diff & Comparison
 
 **Text Content:**
 - Unified diff format

@@ -219,7 +219,7 @@
     <div class="px-6 py-3 border-t border-gray-200 bg-gray-50 text-xs text-gray-500 flex justify-between items-center gap-6">
       <div class="flex items-center gap-4">
         {#if showItemsCount}
-          <span>{data.length} {title.toLowerCase()}{data.length !== 1 ? 's' : ''}</span>
+          <span>{data.length} {data.length === 1 ? 'item' : 'items'}</span>
         {/if}
         {#if data.length > 0}
           <div class="flex items-center gap-2">

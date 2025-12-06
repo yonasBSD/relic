@@ -384,6 +384,14 @@ const FILE_TYPES = [
     category: 'code'
   },
   {
+    syntax: 'relic-index',
+    label: 'Relic Index',
+    icon: 'fa-solid fa-list-ul',
+    mime: 'application/x-relic-index',
+    extensions: ['rix'],
+    category: 'relicindex'
+  },
+  {
     syntax: 'yaml',
     label: 'YAML',
     icon: 'fa-code',
@@ -1114,9 +1122,9 @@ export function getSyntaxFromExtension(extension) {
 export function isCodeType(contentType) {
   if (!contentType) return false
   const type = getFileTypeDefinition(contentType)
-  
+
   if (type.category === 'code') return true
-  
+
   // Fallback checks for other common code indicators
   const lowerType = contentType.toLowerCase()
   if (lowerType.includes('script') || lowerType.includes('source')) {

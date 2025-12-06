@@ -29,6 +29,7 @@
   import CsvRenderer from "./renderers/CsvRenderer.svelte";
   import ArchiveRenderer from "./renderers/ArchiveRenderer.svelte";
   import ExcalidrawRenderer from "./renderers/ExcalidrawRenderer.svelte";
+  import RelicIndexRenderer from "./renderers/RelicIndexRenderer.svelte";
 
   const dispatch = createEventDispatcher();
 
@@ -549,6 +550,8 @@
             {showLineNumbers}
             {fontSize}
           />
+        {:else if processed.type === "relicindex"}
+          <RelicIndexRenderer {processed} {relicId} />
         {:else if processed.type === "excalidraw"}
           <ExcalidrawRenderer {processed} {relicId} {relic} />
         {:else}

@@ -8,7 +8,7 @@ A modern, feature-rich artifact service with immutable relics, complete version 
 - **Version Lineage**: Track complete history through parent-child relationships (forks).
 - **Universal Content Support**: Text, code, images, PDFs, CSV/Excel, archives, and more.
 - **Smart Processing**: Automatic syntax highlighting, thumbnail generation, metadata extraction.
-
+- **Relic Indexes**: Create collections of relics with custom titles, descriptions, and metadata overrides (.rix files).
 - **Access Control**: Public, unlisted, and private relics with optional password protection.
 - **Expiration**: Set relics to expire after 1h, 24h, 7d, 30d, or never.
 - **Database Backups**: Automated and manual database backups with retention policies.
@@ -99,6 +99,54 @@ curl -X DELETE http://localhost/api/v1/relics/{id}
 ```bash
 curl "http://localhost/api/v1/relics?limit=50"
 ```
+
+## Relic Indexes
+
+Relic indexes (`.rix` files) allow you to create curated collections of relics with custom titles, descriptions, and metadata overrides.
+
+### Creating a Relic Index
+
+Create a `.rix` file with YAML format:
+
+```yaml
+title: My Project Documentation
+description: A collection of documentation files for the project.
+relics:
+  - id: f47ac10b58cc4372a5670e02b2c3d479
+    title: API Reference
+    description: Complete API documentation
+    tags: [api, docs]
+  - id: a1b2c3d4e5f678901234567890abcdef
+    title: User Guide
+  - id: 1234567890abcdef1234567890abcdef
+```
+
+### Format Specification
+
+- **title** (optional): Index title displayed in the header
+- **description** (optional): Brief description of the collection
+- **relics**: Array of relic references
+  - **id** (required): 32-character hexadecimal relic ID
+  - **title** (optional): Override the relic's display name
+  - **description** (optional): Override the relic's description
+  - **tags** (optional): Array of tags for the relic
+
+### Simple Format
+
+For basic lists, you can also use a simpler format with just IDs:
+
+```
+f47ac10b58cc4372a5670e02b2c3d479
+a1b2c3d4e5f678901234567890abcdef
+1234567890abcdef1234567890abcdef
+```
+
+### Features
+
+- **Progressive Loading**: Relics are fetched in batches for better performance
+- **Search & Filter**: Full search and pagination support
+- **Metadata Overrides**: Customize titles, descriptions, and tags per relic
+- **Standard Actions**: Share, copy, download, and fork relics directly from the index
 
 ## Data Model
 

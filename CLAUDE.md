@@ -41,13 +41,14 @@ Key principle: Relics cannot be edited after creation - they are permanent and i
 
 ### 2. Universal Content Support
 
-The system handles **any file type** (text, code, images, PDFs, CSVs, archives, etc.):
+The system handles **any file type** (text, code, images, PDFs, CSVs, archives, relic indexes, etc.):
 
 - **Text/Code**: Displayed with syntax highlighting support via language hints
 - **Images**: Displayed as-is with size information
 - **PDFs**: Downloaded and can be viewed in browser
 - **CSV/Excel**: Downloaded and can be opened in external tools
 - **Videos/Archives**: Downloaded and can be processed locally
+- **Relic Indexes (.rix)**: Collections of relics with custom metadata and progressive loading
 
 
 ### 3. Fork Relationships
@@ -156,11 +157,22 @@ relic/
 │   │   │   ├── RecentRelics.svelte
 │   │   │   ├── RelicTable.svelte
 │   │   │   ├── ApiDocs.svelte
-│   │   │   └── Toast.svelte
+│   │   │   ├── Toast.svelte
+│   │   │   └── renderers/
+│   │   │       ├── MarkdownRenderer.svelte
+│   │   │       ├── CodeRenderer.svelte
+│   │   │       ├── ImageRenderer.svelte
+│   │   │       ├── CsvRenderer.svelte
+│   │   │       ├── ArchiveRenderer.svelte
+│   │   │       ├── ExcalidrawRenderer.svelte
+│   │   │       └── RelicIndexRenderer.svelte
 │   │   ├── stores/
 │   │   │   └── toastStore.js
 │   │   └── services/
-│   │       └── api.js
+│   │       ├── api.js
+│   │       ├── processors.js
+│   │       ├── typeUtils.js
+│   │       └── paginationUtils.js
 │   ├── index.html
 │   ├── vite.config.js
 │   ├── tailwind.config.js
@@ -180,6 +192,39 @@ relic/
 ```
 
 ## Common Development Tasks
+
+### Handling Relic Indexes
+
+Relic indexes are processed entirely on the frontend:
+
+**File Type Detection** (`typeUtils.js`):
+- Extension: `.rix`
+- MIME type: `application/x-relic-index`
+- Category: `relicindex`
+
+**Content Processing** (`processors.js`):
+- `isRelicIndex(content, contentType)`: Auto-detect if content is a relic index
+  - Check for MIME type `application/x-relic-index`
+  - Check for structured format signature (`relics:` and `- id:`)
+  - Heuristic: >50% of lines match ID pattern `[a-f0-9]{32}`
+- `processRelicIndex(content)`: Parse the .rix file
+  - Detect format (structured YAML vs simple list)
+  - Extract metadata (title, description)
+  - Parse relic array with overrides (title, description, tags)
+  - Return `{type: 'relicindex', relics: [...], meta: {...}}`
+
+**Rendering** (`RelicIndexRenderer.svelte`):
+- Progressive loading in batches of 5
+- Fetch each relic via `getRelic(id)`
+- Apply metadata overrides from index
+- Display in `RelicTable` with full pagination/search
+- Handle errors gracefully (show placeholder for failed relics)
+
+**Integration**:
+- `RelicViewer.svelte` routes to `RelicIndexRenderer` when `processed.type === 'relicindex'`
+- Uses standard `RelicTable` component for consistent UI
+- All standard relic actions available (share, copy, fork, download)
+
 ### Handling Fork Relationships
 
 For queries across fork relationships:
