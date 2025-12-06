@@ -96,10 +96,20 @@ function buildFileTree(files) {
  * Uses centralized type detection from typeUtils.js for comprehensive language support
  */
 function getContentTypeFromPath(path) {
-  const ext = path.split('.').pop()?.toLowerCase()
-  if (!ext) return 'application/octet-stream'
+  const parts = path.split('.')
+  if (parts.length < 2) return 'application/octet-stream'
 
-  // Use centralized type detection for comprehensive language support (100+ languages)
+  // Check for compound extensions first (e.g., .excalidraw.json, .cmake.in)
+  if (parts.length >= 3) {
+    const compoundExt = (parts[parts.length - 2] + '.' + parts[parts.length - 1]).toLowerCase()
+    const compoundSyntax = getSyntaxFromExtension(compoundExt)
+    if (compoundSyntax) {
+      return getContentType(compoundSyntax)
+    }
+  }
+
+  // Fall back to single extension
+  const ext = parts[parts.length - 1].toLowerCase()
   const syntax = getSyntaxFromExtension(ext)
   if (syntax) {
     return getContentType(syntax)
@@ -142,16 +152,31 @@ async function processZip(content) {
       if (!file) throw new Error('File not found in archive')
 
       const contentType = getContentTypeFromPath(path)
-      const isText = contentType.startsWith('text/') ||
-                     contentType.includes('json') ||
-                     contentType.includes('javascript') ||
-                     contentType.includes('typescript') ||
-                     contentType.includes('xml')
+
+      // Explicitly check for binary types first (archives, media, etc.)
+      const isBinary = contentType.includes('image/') ||
+                       contentType.includes('video/') ||
+                       contentType.includes('audio/') ||
+                       contentType.includes('pdf') ||
+                       contentType.includes('zip') ||
+                       contentType.includes('tar') ||
+                       contentType.includes('gzip') ||
+                       contentType.includes('octet-stream')
+
+      // Check for text types
+      const isText = !isBinary && (
+        contentType.startsWith('text/') ||
+        contentType.includes('json') ||
+        contentType.includes('javascript') ||
+        contentType.includes('typescript') ||
+        contentType.includes('xml') ||
+        contentType.includes('html')
+      )
 
       if (isText) {
         return await file.async('string')
       } else {
-        return await file.async('uint8array')
+        return await file.async('arraybuffer')
       }
     }
   }
@@ -208,16 +233,31 @@ async function processTar(content, isGzipped = false) {
         }
 
         const contentType = file.contentType
-        const isText = contentType.startsWith('text/') ||
-                       contentType.includes('json') ||
-                       contentType.includes('javascript') ||
-                       contentType.includes('typescript') ||
-                       contentType.includes('xml')
+
+        // Explicitly check for binary types first (archives, media, etc.)
+        const isBinary = contentType.includes('image/') ||
+                         contentType.includes('video/') ||
+                         contentType.includes('audio/') ||
+                         contentType.includes('pdf') ||
+                         contentType.includes('zip') ||
+                         contentType.includes('tar') ||
+                         contentType.includes('gzip') ||
+                         contentType.includes('octet-stream')
+
+        // Check for text types
+        const isText = !isBinary && (
+          contentType.startsWith('text/') ||
+          contentType.includes('json') ||
+          contentType.includes('javascript') ||
+          contentType.includes('typescript') ||
+          contentType.includes('xml') ||
+          contentType.includes('html')
+        )
 
         if (isText) {
           return new TextDecoder().decode(file._buffer)
         } else {
-          return new Uint8Array(file._buffer)
+          return file._buffer
         }
       }
     }

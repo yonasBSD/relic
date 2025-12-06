@@ -6,6 +6,7 @@
   import HtmlRenderer from './HtmlRenderer.svelte'
   import CsvRenderer from './CsvRenderer.svelte'
   import ExcalidrawRenderer from './ExcalidrawRenderer.svelte'
+  import PDFViewer from '../PDFViewer.svelte'
 
   export let processed
   export let relicId
@@ -297,15 +298,32 @@
                 {fontSize}
               />
             {:else if previewedFile.processed.type === 'markdown'}
-              <MarkdownRenderer processed={previewedFile.processed} />
+              <MarkdownRenderer
+                processed={previewedFile.processed}
+                {relicId}
+                {showSyntaxHighlighting}
+                {showLineNumbers}
+              />
             {:else if previewedFile.processed.type === 'html'}
-              <HtmlRenderer processed={previewedFile.processed} />
+              <HtmlRenderer
+                processed={previewedFile.processed}
+                {relicId}
+                {showSyntaxHighlighting}
+                {showLineNumbers}
+              />
             {:else if previewedFile.processed.type === 'csv'}
               <CsvRenderer processed={previewedFile.processed} />
             {:else if previewedFile.processed.type === 'image'}
               <ImageRenderer processed={previewedFile.processed} relicName={selectedFile.name} />
             {:else if previewedFile.processed.type === 'excalidraw'}
               <ExcalidrawRenderer processed={previewedFile.processed} />
+            {:else if previewedFile.processed.type === 'pdf'}
+              <PDFViewer
+                pdfDocument={previewedFile.processed.pdfDocument}
+                metadata={previewedFile.processed.metadata}
+                passwordRequired={previewedFile.processed.passwordRequired}
+                {relicId}
+              />
             {:else}
               <div class="p-6 text-center text-gray-500">
                 <i class="fas fa-eye-slash text-gray-300 text-4xl mb-4"></i>
