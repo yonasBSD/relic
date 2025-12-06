@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     BACKUP_ON_STARTUP: bool = os.getenv("BACKUP_ON_STARTUP", "true").lower() == "true"
     BACKUP_ON_SHUTDOWN: bool = os.getenv("BACKUP_ON_SHUTDOWN", "true").lower() == "true"
 
+    # Admin Configuration
+    ADMIN_CLIENT_IDS: str = os.getenv("ADMIN_CLIENT_IDS", "")
+
     # CORS - accept as string from env, parse in validator
     ALLOWED_ORIGINS: str = '["http://localhost:3000", "http://localhost:8000"]'
 
@@ -85,5 +88,19 @@ class Settings(BaseSettings):
                 times.append((int(hour), int(minute)))
         return times
 
+    def get_admin_client_ids(self) -> List[str]:
+        """
+        Get list of admin client IDs.
+
+        Parses ADMIN_CLIENT_IDS env var which contains comma-separated client IDs.
+
+        Returns:
+            List of admin client ID strings
+        """
+        if not self.ADMIN_CLIENT_IDS:
+            return []
+        return [cid.strip() for cid in self.ADMIN_CLIENT_IDS.split(",") if cid.strip()]
+
 
 settings = Settings()
+

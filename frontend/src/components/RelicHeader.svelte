@@ -1,62 +1,93 @@
 <script>
-  import { getTypeLabel, getTypeIcon, getTypeIconColor, formatBytes } from '../services/typeUtils'
   import {
-    shareRelic, copyRelicContent, downloadRelic, viewRaw,
-    downloadArchiveFile, copyArchiveFileContent, viewArchiveFileRaw
-  } from '../services/relicActions'
-  import { createEventDispatcher } from 'svelte'
+    getTypeLabel,
+    getTypeIcon,
+    getTypeIconColor,
+    formatBytes,
+  } from "../services/typeUtils";
+  import {
+    shareRelic,
+    copyRelicContent,
+    downloadRelic,
+    viewRaw,
+    downloadArchiveFile,
+    copyArchiveFileContent,
+    viewArchiveFileRaw,
+  } from "../services/relicActions";
+  import { createEventDispatcher } from "svelte";
 
-  export let relic
-  export let relicId
-  export let isBookmarked
-  export let bookmarkLoading
-  export let checkingBookmark
-  export let forkLoading
+  export let relic;
+  export let relicId;
+  export let isBookmarked;
+  export let bookmarkLoading;
+  export let checkingBookmark;
+  export let forkLoading;
+  export let isAdmin = false;
+  export let deleteLoading = false;
   // Archive file props
-  export let isArchiveFile = false
+  export let isArchiveFile = false;
 
-  const dispatch = createEventDispatcher()
+  const dispatch = createEventDispatcher();
 
   function copyRelicId() {
-    navigator.clipboard.writeText(relicId)
+    navigator.clipboard.writeText(relicId);
   }
 
   function handleShare() {
-    shareRelic(relicId)
+    shareRelic(relicId);
   }
 
   function handleCopyContent() {
     if (isArchiveFile && relic._extractedContent) {
-      copyArchiveFileContent(relic._extractedContent)
+      copyArchiveFileContent(relic._extractedContent);
     } else {
-      copyRelicContent(relicId)
+      copyRelicContent(relicId);
     }
   }
 
   function handleDownload() {
     if (isArchiveFile && relic._extractedContent) {
-      downloadArchiveFile(relic._extractedContent, relic.name, relic.content_type)
+      downloadArchiveFile(
+        relic._extractedContent,
+        relic.name,
+        relic.content_type,
+      );
     } else {
-      downloadRelic(relicId, relic.name, relic.content_type)
+      downloadRelic(relicId, relic.name, relic.content_type);
     }
   }
 
   function handleViewRaw() {
     if (isArchiveFile && relic._extractedContent) {
-      viewArchiveFileRaw(relic._extractedContent, relic.name, relic.content_type)
+      viewArchiveFileRaw(
+        relic._extractedContent,
+        relic.name,
+        relic.content_type,
+      );
     } else {
-      viewRaw(relicId)
+      viewRaw(relicId);
     }
   }
 </script>
 
-<div class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-start">
+<div
+  class="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-start"
+>
   <div class="flex-1 min-w-0">
     <!-- Title Row -->
     <div class="flex items-center gap-3 mb-1.5">
-      <i class="fas {getTypeIcon(relic.content_type)} {getTypeIconColor(relic.content_type)} text-lg flex-shrink-0"></i>
-      <h2 class="text-lg font-bold text-gray-800 truncate">{relic.name || 'Untitled'}</h2>
-      <span class="px-2 py-1 bg-gray-200 text-gray-700 rounded text-xs font-bold uppercase flex-shrink-0">{getTypeLabel(relic.content_type)}</span>
+      <i
+        class="fas {getTypeIcon(relic.content_type)} {getTypeIconColor(
+          relic.content_type,
+        )} text-lg flex-shrink-0"
+      ></i>
+      <h2 class="text-lg font-bold text-gray-800 truncate">
+        {relic.name || "Untitled"}
+      </h2>
+      <span
+        class="px-2 py-1 bg-gray-200 text-gray-700 rounded text-xs font-bold uppercase flex-shrink-0"
+        >{getTypeLabel(relic.content_type)}</span
+      >
     </div>
 
     <!-- ID and Date Row -->
@@ -88,12 +119,12 @@
   <div class="flex items-center gap-2 flex-shrink-0 ml-4">
     {#if !isArchiveFile}
       <button
-        on:click={() => dispatch('toggle-bookmark')}
+        on:click={() => dispatch("toggle-bookmark")}
         disabled={checkingBookmark || bookmarkLoading}
         class="p-2 rounded transition-colors {isBookmarked
           ? 'text-amber-600 hover:text-amber-700 hover:bg-amber-50'
           : 'text-gray-400 hover:text-amber-600 hover:bg-amber-50'}"
-        title={isBookmarked ? 'Remove bookmark' : 'Bookmark this relic'}
+        title={isBookmarked ? "Remove bookmark" : "Bookmark this relic"}
       >
         {#if bookmarkLoading}
           <i class="fas fa-spinner fa-spin text-sm"></i>
@@ -126,7 +157,7 @@
       <i class="fas fa-code text-sm"></i>
     </button>
     <button
-      on:click={() => dispatch('fork')}
+      on:click={() => dispatch("fork")}
       disabled={forkLoading}
       class="p-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded transition-colors"
       title="Create fork"
@@ -144,5 +175,20 @@
     >
       <i class="fas fa-download text-sm"></i>
     </button>
+    {#if isAdmin && !isArchiveFile}
+      <div class="w-px h-6 bg-gray-300 mx-1"></div>
+      <button
+        on:click={() => dispatch("delete")}
+        disabled={deleteLoading}
+        class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+        title="Delete relic (Admin)"
+      >
+        {#if deleteLoading}
+          <i class="fas fa-spinner fa-spin text-sm"></i>
+        {:else}
+          <i class="fas fa-trash text-sm"></i>
+        {/if}
+      </button>
+    {/if}
   </div>
 </div>

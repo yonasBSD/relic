@@ -1,163 +1,208 @@
 <script>
-  import { onMount } from 'svelte'
-    import RelicForm from './components/RelicForm.svelte'
-  import RelicViewer from './components/RelicViewer.svelte'
-  import RecentRelics from './components/RecentRelics.svelte'
-  import MyRelics from './components/MyRelics.svelte'
-  import MyBookmarks from './components/MyBookmarks.svelte'
-  import ApiDocs from './components/ApiDocs.svelte'
-  import Toast from './components/Toast.svelte'
-  import { toastStore } from './stores/toastStore'
-  import { getOrCreateClientKey } from './services/api'
-  import { showToast } from './stores/toastStore'
+  import { onMount } from "svelte";
+  import RelicForm from "./components/RelicForm.svelte";
+  import RelicViewer from "./components/RelicViewer.svelte";
+  import RecentRelics from "./components/RecentRelics.svelte";
+  import MyRelics from "./components/MyRelics.svelte";
+  import MyBookmarks from "./components/MyBookmarks.svelte";
+  import ApiDocs from "./components/ApiDocs.svelte";
+  import AdminPanel from "./components/AdminPanel.svelte";
+  import Toast from "./components/Toast.svelte";
+  import { toastStore } from "./stores/toastStore";
+  import { getOrCreateClientKey, checkAdminStatus } from "./services/api";
+  import { showToast } from "./stores/toastStore";
 
-  let currentSection = 'new'
-  let currentRelicId = null
-  let currentFilePath = null // For archive file paths
-  let showKeyDropdown = false
-  let relicViewerFullWidth = false
+  let currentSection = "new";
+  let currentRelicId = null;
+  let currentFilePath = null; // For archive file paths
+  let showKeyDropdown = false;
+  let relicViewerFullWidth = false;
+  let isAdmin = false;
 
   function updateRouting() {
-    const path = window.location.pathname
-    const parts = path.split('/').filter(p => p)
+    const path = window.location.pathname;
+    const parts = path.split("/").filter((p) => p);
 
-    console.log('[App] Route update - path:', path, 'parts:', parts)
+    console.log("[App] Route update - path:", path, "parts:", parts);
 
-    if (parts.length >= 1 && parts[0] && parts[0] !== 'api' && parts[0] !== 'recent' && parts[0] !== 'my-relics' && parts[0] !== 'my-bookmarks' && parts[0] !== 'new') {
+    if (
+      parts.length >= 1 &&
+      parts[0] &&
+      parts[0] !== "api" &&
+      parts[0] !== "recent" &&
+      parts[0] !== "my-relics" &&
+      parts[0] !== "my-bookmarks" &&
+      parts[0] !== "new" &&
+      parts[0] !== "admin"
+    ) {
       // This looks like a relic ID (possibly with file path)
-      currentRelicId = parts[0]
-      currentSection = 'relic'
+      currentRelicId = parts[0];
+      currentSection = "relic";
 
       // Check if there's a file path (parts after the relic ID)
       if (parts.length > 1) {
-        currentFilePath = parts.slice(1).join('/')
-        console.log('[App] Detected archive file path:', currentFilePath)
+        currentFilePath = parts.slice(1).join("/");
+        console.log("[App] Detected archive file path:", currentFilePath);
       } else {
-        currentFilePath = null
+        currentFilePath = null;
       }
 
-      console.log('[App] Detected relic ID:', parts[0])
+      console.log("[App] Detected relic ID:", parts[0]);
     } else if (parts.length === 0) {
-      console.log('[App] Navigating to home')
-      currentSection = 'new'
-      currentRelicId = null
-      currentFilePath = null
+      console.log("[App] Navigating to home");
+      currentSection = "new";
+      currentRelicId = null;
+      currentFilePath = null;
     } else {
-      console.log('[App] Navigating to section:', parts[0])
-      currentSection = parts[0]
-      currentRelicId = null
-      currentFilePath = null
+      console.log("[App] Navigating to section:", parts[0]);
+      currentSection = parts[0];
+      currentRelicId = null;
+      currentFilePath = null;
     }
 
-    console.log('[App] Routing result - section:', currentSection, 'relicId:', currentRelicId, 'filePath:', currentFilePath)
+    console.log(
+      "[App] Routing result - section:",
+      currentSection,
+      "relicId:",
+      currentRelicId,
+      "filePath:",
+      currentFilePath,
+    );
   }
 
-  onMount(() => {
+  onMount(async () => {
     // Initialize client key on app start
-    getOrCreateClientKey()
+    getOrCreateClientKey();
+
+    // Check admin status
+    try {
+      const response = await checkAdminStatus();
+      isAdmin = response.data.is_admin;
+    } catch (error) {
+      console.error("[App] Failed to check admin status:", error);
+      isAdmin = false;
+    }
 
     // Load full-width preference from localStorage
-    const saved = localStorage.getItem('relic_viewer_fullwidth')
+    const saved = localStorage.getItem("relic_viewer_fullwidth");
     if (saved !== null) {
-      relicViewerFullWidth = saved === 'true'
+      relicViewerFullWidth = saved === "true";
     }
 
     // Initial routing on page load
-    updateRouting()
+    updateRouting();
 
     // Listen for popstate to handle browser back/forward
-    window.addEventListener('popstate', updateRouting)
-    return () => window.removeEventListener('popstate', updateRouting)
-  })
+    window.addEventListener("popstate", updateRouting);
+    return () => window.removeEventListener("popstate", updateRouting);
+  });
 
   function handleNavigation(section) {
-    currentSection = section
-    currentRelicId = null
+    currentSection = section;
+    currentRelicId = null;
 
-    if (section === 'new') {
-      window.history.pushState({}, '', '/')
+    if (section === "new") {
+      window.history.pushState({}, "", "/");
     } else {
-      window.history.pushState({}, '', `/${section}`)
+      window.history.pushState({}, "", `/${section}`);
     }
   }
 
   function downloadClientKey() {
-    const clientKey = getOrCreateClientKey()
-    const blob = new Blob([clientKey], { type: 'text/plain' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `relic-client-key-${clientKey.substring(0, 8)}.txt`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    const clientKey = getOrCreateClientKey();
+    const blob = new Blob([clientKey], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `relic-client-key-${clientKey.substring(0, 8)}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 
-    showToast('Client key downloaded successfully', 'success')
-    showKeyDropdown = false
+    showToast("Client key downloaded successfully", "success");
+    showKeyDropdown = false;
   }
 
   function copyClientKey() {
-    const clientKey = getOrCreateClientKey()
-    navigator.clipboard.writeText(clientKey).then(() => {
-      showToast('Client key copied to clipboard', 'success')
-    }).catch(() => {
-      showToast('Failed to copy client key', 'error')
-    })
-    showKeyDropdown = false
+    const clientKey = getOrCreateClientKey();
+    navigator.clipboard
+      .writeText(clientKey)
+      .then(() => {
+        showToast("Client key copied to clipboard", "success");
+      })
+      .catch(() => {
+        showToast("Failed to copy client key", "error");
+      });
+    showKeyDropdown = false;
   }
 
   function uploadClientKey(event) {
-    const file = event.target.files[0]
-    if (!file) return
+    const file = event.target.files[0];
+    if (!file) return;
 
-    const reader = new FileReader()
+    const reader = new FileReader();
     reader.onload = (e) => {
-      const clientKey = e.target.result.trim()
+      const clientKey = e.target.result.trim();
 
       // Validate client key format (32 hex characters)
       if (!/^[a-f0-9]{32}$/i.test(clientKey)) {
-        showToast('Invalid client key format. Please use a valid 32-character hexadecimal key.', 'error')
-        return
+        showToast(
+          "Invalid client key format. Please use a valid 32-character hexadecimal key.",
+          "error",
+        );
+        return;
       }
 
       // Store the new client key
-      localStorage.setItem('relic_client_key', clientKey)
+      localStorage.setItem("relic_client_key", clientKey);
 
       // Re-register with server
-      fetch('/api/v1/client/register', {
-        method: 'POST',
+      fetch("/api/v1/client/register", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'X-Client-Key': clientKey
-        }
-      }).then(response => response.json()).then(data => {
-        if (data.message.includes('successfully') || data.message.includes('already registered')) {
-          showToast('Client key imported successfully! Reloading...', 'success')
-          setTimeout(() => {
-            window.location.reload()
-          }, 1500)
-        } else {
-          showToast('Failed to import client key', 'error')
-        }
-      }).catch(() => {
-        showToast('Failed to import client key', 'error')
+          "Content-Type": "application/json",
+          "X-Client-Key": clientKey,
+        },
       })
-    }
-    reader.readAsText(file)
+        .then((response) => response.json())
+        .then((data) => {
+          if (
+            data.message.includes("successfully") ||
+            data.message.includes("already registered")
+          ) {
+            showToast(
+              "Client key imported successfully! Reloading...",
+              "success",
+            );
+            setTimeout(() => {
+              window.location.reload();
+            }, 1500);
+          } else {
+            showToast("Failed to import client key", "error");
+          }
+        })
+        .catch(() => {
+          showToast("Failed to import client key", "error");
+        });
+    };
+    reader.readAsText(file);
 
     // Reset file input
-    event.target.value = ''
-    showKeyDropdown = false
+    event.target.value = "";
+    showKeyDropdown = false;
   }
 
   function handleFullWidthToggle(event) {
-    relicViewerFullWidth = event.detail.isFullWidth
+    relicViewerFullWidth = event.detail.isFullWidth;
   }
 </script>
 
 <svelte:head>
-  <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&family=Ubuntu+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&family=Ubuntu+Mono:wght@400;700&display=swap"
+    rel="stylesheet"
+  />
 </svelte:head>
 
 <div class="min-h-screen flex flex-col font-ubuntu bg-[#F7F7F7] text-[#333333]">
@@ -167,49 +212,73 @@
       <div class="flex items-center justify-between h-16">
         <!-- Logo and Brand -->
         <div class="flex items-center gap-3">
-          <div class="font-bold text-xl tracking-tight">RELIC <span class="font-light opacity-80">Bin</span></div>
-          <span class="text-xs bg-black/20 px-2 py-0.5 rounded text-white/70">v1.0.0</span>
+          <div class="font-bold text-xl tracking-tight">
+            RELIC <span class="font-light opacity-80">Bin</span>
+          </div>
+          <span class="text-xs bg-black/20 px-2 py-0.5 rounded text-white/70"
+            >v1.0.0</span
+          >
         </div>
 
         <!-- Top Navigation -->
         <nav class="hidden md:flex items-center space-x-1 ml-auto">
           <button
-            on:click={() => handleNavigation('new')}
-            class="maas-nav-top {currentSection === 'new' ? 'active' : ''} px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+            on:click={() => handleNavigation("new")}
+            class="maas-nav-top {currentSection === 'new'
+              ? 'active'
+              : ''} px-4 py-2 text-sm font-medium rounded-lg transition-colors"
           >
             <i class="fas fa-plus mr-2"></i>New Relic
           </button>
           <button
-            on:click={() => handleNavigation('recent')}
-            class="maas-nav-top {currentSection === 'recent' ? 'active' : ''} px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+            on:click={() => handleNavigation("recent")}
+            class="maas-nav-top {currentSection === 'recent'
+              ? 'active'
+              : ''} px-4 py-2 text-sm font-medium rounded-lg transition-colors"
           >
             <i class="fas fa-clock mr-2"></i>Recent
           </button>
           <button
-            on:click={() => handleNavigation('my-relics')}
-            class="maas-nav-top {currentSection === 'my-relics' ? 'active' : ''} px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+            on:click={() => handleNavigation("my-relics")}
+            class="maas-nav-top {currentSection === 'my-relics'
+              ? 'active'
+              : ''} px-4 py-2 text-sm font-medium rounded-lg transition-colors"
           >
             <i class="fas fa-user mr-2"></i>My Relics
           </button>
           <button
-            on:click={() => handleNavigation('my-bookmarks')}
-            class="maas-nav-top {currentSection === 'my-bookmarks' ? 'active' : ''} px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+            on:click={() => handleNavigation("my-bookmarks")}
+            class="maas-nav-top {currentSection === 'my-bookmarks'
+              ? 'active'
+              : ''} px-4 py-2 text-sm font-medium rounded-lg transition-colors"
           >
             <i class="fas fa-bookmark mr-2"></i>Bookmarks
           </button>
           <button
-            on:click={() => handleNavigation('api')}
-            class="maas-nav-top {currentSection === 'api' ? 'active' : ''} px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+            on:click={() => handleNavigation("api")}
+            class="maas-nav-top {currentSection === 'api'
+              ? 'active'
+              : ''} px-4 py-2 text-sm font-medium rounded-lg transition-colors"
           >
             <i class="fas fa-code mr-2"></i>API
           </button>
+          {#if isAdmin}
+            <button
+              on:click={() => handleNavigation("admin")}
+              class="maas-nav-top {currentSection === 'admin'
+                ? 'active'
+                : ''} px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+            >
+              <i class="fas fa-shield-alt mr-2"></i>Admin
+            </button>
+          {/if}
         </nav>
 
         <!-- Client Key Menu -->
         <div class="flex items-center gap-4">
           <div class="client-key-dropdown relative">
             <button
-              on:click={() => showKeyDropdown = !showKeyDropdown}
+              on:click={() => (showKeyDropdown = !showKeyDropdown)}
               class="p-2 text-white/80 hover:text-white transition-colors"
               title="Relic Key"
             >
@@ -217,10 +286,16 @@
             </button>
 
             {#if showKeyDropdown}
-              <div class="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+              <div
+                class="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+              >
                 <div class="p-3 border-b border-gray-200">
-                  <p class="text-sm font-medium text-gray-900">Manage Your Relic Key</p>
-                  <p class="text-xs text-gray-500 mt-1">Backup your key to access your relics from any device</p>
+                  <p class="text-sm font-medium text-gray-900">
+                    Manage Your Relic Key
+                  </p>
+                  <p class="text-xs text-gray-500 mt-1">
+                    Backup your key to access your relics from any device
+                  </p>
                 </div>
 
                 <div class="py-2">
@@ -240,7 +315,9 @@
                     <span>Copy to Clipboard</span>
                   </button>
 
-                  <label class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer flex items-center">
+                  <label
+                    class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer flex items-center"
+                  >
                     <i class="fas fa-upload w-5 text-purple-600"></i>
                     <span>Import Key</span>
                     <input
@@ -268,19 +345,29 @@
 
   <!-- Main Content -->
   <main class="flex-1 overflow-auto">
-    <div class="{relicViewerFullWidth && currentSection === 'relic' ? 'w-full' : 'max-w-7xl mx-auto'} py-6 px-4 sm:px-6 lg:px-8 transition-all duration-300">
-      {#if currentSection === 'relic' && currentRelicId}
-        <RelicViewer relicId={currentRelicId} filePath={currentFilePath} on:fullwidth-toggle={handleFullWidthToggle} />
-      {:else if currentSection === 'new' || currentSection === 'default' || currentSection === ''}
+    <div
+      class="{relicViewerFullWidth && currentSection === 'relic'
+        ? 'w-full'
+        : 'max-w-7xl mx-auto'} py-6 px-4 sm:px-6 lg:px-8 transition-all duration-300"
+    >
+      {#if currentSection === "relic" && currentRelicId}
+        <RelicViewer
+          relicId={currentRelicId}
+          filePath={currentFilePath}
+          on:fullwidth-toggle={handleFullWidthToggle}
+        />
+      {:else if currentSection === "new" || currentSection === "default" || currentSection === ""}
         <RelicForm />
-      {:else if currentSection === 'recent'}
+      {:else if currentSection === "recent"}
         <RecentRelics />
-      {:else if currentSection === 'my-relics'}
+      {:else if currentSection === "my-relics"}
         <MyRelics />
-      {:else if currentSection === 'my-bookmarks'}
+      {:else if currentSection === "my-bookmarks"}
         <MyBookmarks />
-      {:else if currentSection === 'api'}
+      {:else if currentSection === "api"}
         <ApiDocs />
+      {:else if currentSection === "admin"}
+        <AdminPanel />
       {/if}
     </div>
   </main>
@@ -292,8 +379,8 @@
   :global(body) {
     margin: 0;
     padding: 0;
-    font-family: 'Ubuntu', sans-serif;
-    background-color: #F7F7F7;
+    font-family: "Ubuntu", sans-serif;
+    background-color: #f7f7f7;
     color: #333333;
   }
 
@@ -302,13 +389,15 @@
   }
 
   /* Ubuntu Mono for code */
-  :global(.font-mono), :global(code), :global(pre) {
-    font-family: 'Ubuntu Mono', monospace;
+  :global(.font-mono),
+  :global(code),
+  :global(pre) {
+    font-family: "Ubuntu Mono", monospace;
   }
 
   /* MAAS-style button primary */
   :global(.maas-btn-primary) {
-    background-color: #0E8420;
+    background-color: #0e8420;
     color: white;
     border: none;
     padding: 0.5rem 1rem;
@@ -341,7 +430,7 @@
 
   /* MAAS-style inputs */
   :global(.maas-input) {
-    border: 1px solid #AEA79F;
+    border: 1px solid #aea79f;
     border-radius: 2px;
     padding: 0.5rem 0.75rem;
     font-size: 0.875rem;
@@ -349,25 +438,24 @@
   }
 
   :global(.maas-input:focus) {
-    border-color: #E95420;
+    border-color: #e95420;
     outline: none;
-    box-shadow: 0 0 0 1px #E95420;
+    box-shadow: 0 0 0 1px #e95420;
   }
 
-  
   /* Card styling */
   :global(.maas-card) {
     background-color: white;
     border: 1px solid #dfdcd9;
     border-radius: 2px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   }
 
   /* Table styling */
   :global(.maas-table th) {
     font-weight: 400;
     color: #111;
-    border-bottom: 1px solid #AEA79F;
+    border-bottom: 1px solid #aea79f;
     text-align: left;
     padding: 0.75rem 1rem;
     font-size: 0.875rem;
@@ -402,14 +490,14 @@
   }
 
   :global(.maas-nav-top.active::after) {
-    content: '';
+    content: "";
     position: absolute;
     bottom: 0;
     left: 50%;
     transform: translateX(-50%);
     width: 20px;
     height: 2px;
-    background-color: #E95420;
+    background-color: #e95420;
     border-radius: 1px;
   }
 

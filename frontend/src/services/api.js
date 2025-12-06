@@ -61,10 +61,11 @@ api.interceptors.request.use((config) => {
       { endpoint: '/relics', methods: ['POST', 'DELETE'] },
       { endpoint: '/edit', methods: ['POST'] },
       { endpoint: 'client/relics', methods: ['GET'] },
-      { endpoint: '/bookmarks', methods: ['GET', 'POST', 'DELETE'] }
+      { endpoint: '/bookmarks', methods: ['GET', 'POST', 'DELETE'] },
+      { endpoint: '/admin/', methods: ['GET', 'POST', 'DELETE'] }
     ]
 
-    const needs = protectedPatterns.some(({endpoint, methods}) =>
+    const needs = protectedPatterns.some(({ endpoint, methods }) =>
       url?.includes(endpoint) && methods.includes(method?.toUpperCase())
     )
 
@@ -166,6 +167,60 @@ export async function getClientBookmarks() {
 // Client-specific endpoints
 export async function getClientRelics() {
   return api.get('/client/relics')
+}
+
+// Admin endpoints
+export async function checkAdminStatus() {
+  return api.get('/admin/check')
+}
+
+export async function getAdminStats() {
+  return api.get('/admin/stats')
+}
+
+export async function getAdminRelics(limit = 100, offset = 0, accessLevel = null, clientId = null) {
+  const params = { limit, offset }
+  if (accessLevel) params.access_level = accessLevel
+  if (clientId) params.client_id = clientId
+  return api.get('/admin/relics', { params })
+}
+
+export async function getAdminClients(limit = 100, offset = 0) {
+  return api.get('/admin/clients', { params: { limit, offset } })
+}
+
+export async function deleteClient(clientId, deleteRelics = false) {
+  return api.delete(`/admin/clients/${clientId}`, {
+    params: { delete_relics: deleteRelics }
+  })
+}
+
+export async function getAdminConfig() {
+  return api.get('/admin/config')
+}
+
+export async function getAdminBackups(limit = 25, offset = 0) {
+  return api.get('/admin/backups', { params: { limit, offset } })
+}
+
+export async function createAdminBackup() {
+  return api.post('/admin/backups')
+}
+
+export async function downloadAdminBackup(filename) {
+  const response = await api.get(`/admin/backups/${filename}/download`, {
+    responseType: 'blob'
+  })
+
+  // Create download link
+  const url = window.URL.createObjectURL(new Blob([response.data]))
+  const link = document.createElement('a')
+  link.href = url
+  link.setAttribute('download', filename)
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.URL.revokeObjectURL(url)
 }
 
 // Export client key functions for components that need them

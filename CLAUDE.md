@@ -92,12 +92,31 @@ POST   /api/v1/relics                  Create relic
 GET    /api/v1/relics/:id              Get relic metadata
 GET    /:id/raw                        Get raw content (served from root)
 POST   /api/v1/relics/:id/fork         Create fork (independent copy)
-DELETE /api/v1/relics/:id              Delete relic (hard delete)
+DELETE /api/v1/relics/:id              Delete relic (owner OR admin)
 
 GET    /api/v1/relics/:id/preview      Get type-specific preview
 GET    /api/v1/relics/:id/thumbnail    Get thumbnail image
 GET    /api/v1/relics                  List recent public relics
 ```
+
+### Admin Endpoints
+
+Admin endpoints require the `X-Client-Key` header with an admin client ID (configured via `ADMIN_CLIENT_IDS` env var).
+
+```
+GET    /api/v1/admin/check             Check admin status (no auth required)
+GET    /api/v1/admin/relics            List all relics (including private)
+GET    /api/v1/admin/clients           List all clients
+GET    /api/v1/admin/stats             Get system statistics
+DELETE /api/v1/admin/clients/:id       Delete a client
+```
+
+**Admin Privileges:**
+- Delete any relic (not just their own)
+- View all relics including private ones via admin endpoints
+- View all registered clients
+- Delete clients (and optionally their relics)
+- View system statistics
 
 ### Request/Response Pattern
 
@@ -105,6 +124,7 @@ GET    /api/v1/relics                  List recent public relics
 - **Get**: Returns full metadata including `content_type`, `size`, `created_at`, etc.
 - **Fork**: Returns `{id, url, fork_of, created_at}`
 - **Preview**: Type-specific (images: metadata+thumbnail_url, CSV: rows+columns+preview+stats, etc.)
+
 
 ## Project Structure
 
