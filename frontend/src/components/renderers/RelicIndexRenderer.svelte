@@ -54,6 +54,12 @@
         for (let i = 0; i < total; i += batchSize) {
             const batch = items.slice(i, i + batchSize);
             const promises = batch.map(async (item) => {
+                // Validate ID format - discard invalid IDs
+                if (!/^[a-f0-9]{32}$/i.test(item.id)) {
+                    console.warn(`[RelicIndex] Invalid ID format, skipping: ${item.id}`);
+                    return null;
+                }
+
                 try {
                     const response = await getRelic(item.id);
                     const relicData = response.data;
@@ -66,22 +72,19 @@
 
                     return relicData;
                 } catch (err) {
-                    console.error(`Failed to fetch relic ${item.id}:`, err);
-                    return {
-                        id: item.id,
-                        name: item.title || "Unknown Relic",
-                        description:
-                            item.description || "Failed to load relic details",
-                        error: true,
-                    };
+                    // Discard relics that don't exist or can't be accessed
+                    console.warn(`[RelicIndex] Skipping relic ${item.id}:`, err.response?.status || err.message);
+                    return null;
                 }
             });
 
             const batchResults = await Promise.all(promises);
-            results.push(...batchResults);
-            progress = Math.min(results.length, total);
+            // Filter out null results (invalid or inaccessible relics)
+            const validResults = batchResults.filter(r => r !== null);
+            results.push(...validResults);
+            progress = Math.min(i + batch.length, total);
 
-            // Update relics progressively
+            // Update relics progressively with only valid results
             relics = [...results];
         }
 

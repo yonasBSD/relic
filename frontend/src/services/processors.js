@@ -243,6 +243,12 @@ export function isRelicIndex(content, contentType) {
   // If explicitly identified as relic index by extension/mime
   if (contentType === 'application/x-relic-index') return true
 
+  // Don't treat binary formats (archives, PDFs, images) as relic indexes
+  const typeDef = getFileTypeDefinition(contentType)
+  if (typeDef.category === 'archive' || typeDef.category === 'pdf' || typeDef.category === 'image') {
+    return false
+  }
+
   const text = decodeContent(content)
 
   // Check for structured format signature
