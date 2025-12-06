@@ -989,6 +989,18 @@ const FILE_TYPES = [
   },
 
   // ============================================
+  // DRAWING & DIAGRAM TOOLS
+  // ============================================
+  {
+    syntax: 'excalidraw',
+    label: 'Excalidraw',
+    icon: 'fa-pen-to-square',
+    mime: 'application/vnd.excalidraw+json',
+    extensions: ['excalidraw', 'excalidraw.json'],
+    category: 'excalidraw'
+  },
+
+  // ============================================
   // PLAIN TEXT (FALLBACK)
   // ============================================
   {
@@ -1029,7 +1041,17 @@ export function getFileTypeDefinition(contentType) {
   if (lowerType.includes('image')) return FILE_TYPES.find(t => t.syntax === 'image')
   if (lowerType.includes('csv')) return FILE_TYPES.find(t => t.syntax === 'csv')
   if (lowerType.includes('zip') || lowerType.includes('archive') || lowerType.includes('tar') || lowerType.includes('gzip')) return FILE_TYPES.find(t => t.syntax === 'archive')
-  
+
+  // Extension-based detection for files with custom formats (e.g., .excalidraw, .excalidraw.json)
+  const extensionMatch = FILE_TYPES.find(t => {
+    if (!t.extensions || t.extensions.length === 0) return false
+    return t.extensions.some(ext => {
+      // Check if contentType ends with the extension (handles compound extensions)
+      return lowerType.endsWith(`.${ext}`) || lowerType.endsWith(`/${ext}`)
+    })
+  })
+  if (extensionMatch) return extensionMatch
+
   // Try syntax substring match (less reliable, but catches some edge cases)
   const syntaxMatch = FILE_TYPES.find(t => lowerType.includes(t.syntax) && t.syntax.length > 2)
   if (syntaxMatch) return syntaxMatch

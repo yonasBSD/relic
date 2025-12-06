@@ -1,7 +1,7 @@
 <script>
   import MonacoEditor from "./MonacoEditor.svelte";
   import MarkdownIt from "markdown-it";
-  import { createEventDispatcher } from "svelte";
+  import { createEventDispatcher, onMount, onDestroy } from "svelte";
 
   const dispatch = createEventDispatcher();
   const md = new MarkdownIt({
@@ -20,6 +20,18 @@
 
   let isExpanded = false;
   let showPreview = false;
+
+  // Excalidraw-specific state
+  let isExcalidraw = false;
+  let excalidrawData = null;
+  let excalidrawContainer = null;
+  let excalidrawAPI = null;
+  let ExcalidrawLib = null;
+  let React = null;
+  let createRoot = null;
+  let excalidrawRoot = null;
+  let excalidrawLoading = false;
+  let excalidrawError = null;
 
   // Editor preferences (initialize from localStorage like RelicViewer)
   let showSyntaxHighlighting = (() => {
@@ -62,6 +74,112 @@
   $: supportsPreview = forkLanguage === "markdown" || forkLanguage === "html";
   $: if (!supportsPreview) showPreview = false;
 
+  // Check if this is an Excalidraw file
+  $: {
+    isExcalidraw = relic?.content_type === 'application/vnd.excalidraw+json' ||
+                   relic?.language_hint === 'excalidraw';
+
+    if (isExcalidraw && editorContent) {
+      try {
+        excalidrawData = JSON.parse(editorContent);
+        if (!excalidrawLoading && !ExcalidrawLib) {
+          loadExcalidraw();
+        }
+      } catch (error) {
+        console.error('[ForkEditor] Failed to parse Excalidraw data:', error);
+        excalidrawData = null;
+      }
+    }
+  }
+
+  async function loadExcalidraw() {
+    if (excalidrawLoading || ExcalidrawLib) return;
+
+    try {
+      excalidrawLoading = true;
+
+      const [reactModule, reactDOMClientModule, excalidrawModule] = await Promise.all([
+        import('react'),
+        import('react-dom/client'),
+        import('@excalidraw/excalidraw')
+      ]);
+
+      React = reactModule.default;
+      createRoot = reactDOMClientModule.createRoot;
+      ExcalidrawLib = excalidrawModule.Excalidraw;
+
+      excalidrawLoading = false;
+
+      // Trigger render
+      renderExcalidraw();
+    } catch (error) {
+      console.error('[ForkEditor] Failed to load Excalidraw:', error);
+      excalidrawError = error.message;
+      excalidrawLoading = false;
+    }
+  }
+
+  function renderExcalidraw() {
+    if (!React || !createRoot || !ExcalidrawLib || !excalidrawContainer || !excalidrawData) return;
+
+    const props = {
+      initialData: {
+        elements: excalidrawData.elements || [],
+        appState: excalidrawData.appState || {}
+      },
+      onChange: (elements, appState) => {
+        // Update the editor content with the new drawing data
+        const updatedData = {
+          type: 'excalidraw',
+          version: 2,
+          source: 'relic',
+          elements: elements,
+          appState: {
+            viewBackgroundColor: appState.viewBackgroundColor,
+            currentItemStrokeColor: appState.currentItemStrokeColor,
+            currentItemBackgroundColor: appState.currentItemBackgroundColor,
+            currentItemFillStyle: appState.currentItemFillStyle,
+            currentItemStrokeWidth: appState.currentItemStrokeWidth,
+            currentItemRoughness: appState.currentItemRoughness,
+            currentItemOpacity: appState.currentItemOpacity,
+            gridSize: appState.gridSize,
+            colorPalette: appState.colorPalette
+          }
+        };
+
+        const jsonContent = JSON.stringify(updatedData, null, 2);
+        dispatch('change', jsonContent);
+      },
+      excalidrawAPI: (api) => {
+        excalidrawAPI = api;
+      }
+    };
+
+    if (!excalidrawRoot) {
+      excalidrawRoot = createRoot(excalidrawContainer);
+    }
+    excalidrawRoot.render(React.createElement(ExcalidrawLib, props));
+  }
+
+  // Re-render when container or data is ready
+  $: if (!excalidrawLoading && !excalidrawError && excalidrawContainer && excalidrawData && ExcalidrawLib) {
+    renderExcalidraw();
+  }
+
+  onMount(() => {
+    if (isExcalidraw && editorContent) {
+      loadExcalidraw();
+    }
+  });
+
+  onDestroy(() => {
+    if (excalidrawRoot) {
+      excalidrawRoot.unmount();
+      excalidrawRoot = null;
+    }
+    excalidrawAPI = null;
+  });
+
   function renderMarkdown(text) {
     try {
       return md.render(text || "");
@@ -82,7 +200,53 @@
 </script>
 
 <div class="flex-1 overflow-hidden flex flex-col">
-  {#if isBinary}
+  {#if isExcalidraw}
+    <!-- Excalidraw Editor -->
+    <div class="px-6 pt-6 pb-2 flex items-center justify-between flex-shrink-0">
+      <label class="text-sm font-medium text-gray-700">Excalidraw Editor</label>
+      <div class="flex items-center gap-2">
+        <div class="text-sm text-gray-500">
+          {excalidrawData?.elements?.length || 0} elements
+        </div>
+
+        <!-- Full-width Toggle -->
+        <button
+          type="button"
+          on:click={toggleExpanded}
+          class="px-2 py-1 rounded text-xs font-medium transition-colors {isExpanded ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}"
+          title={isExpanded ? "Normal width" : "Full width"}
+        >
+          <i class="fas {isExpanded ? 'fa-compress' : 'fa-expand'}"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="flex-1 border-t border-gray-200 overflow-hidden bg-gray-50">
+      {#if excalidrawLoading}
+        <div class="h-full flex items-center justify-center">
+          <div class="text-center">
+            <i class="fas fa-spinner fa-spin text-blue-600 text-4xl mb-4"></i>
+            <p class="text-gray-600">Loading Excalidraw editor...</p>
+          </div>
+        </div>
+      {:else if excalidrawError}
+        <div class="h-full flex items-center justify-center">
+          <div class="text-center">
+            <i class="fas fa-exclamation-triangle text-red-600 text-4xl mb-4"></i>
+            <p class="text-gray-600 mb-2">Failed to load Excalidraw editor</p>
+            <p class="text-sm text-gray-500">{excalidrawError}</p>
+          </div>
+        </div>
+      {:else}
+        <div class="h-full" bind:this={excalidrawContainer}></div>
+      {/if}
+    </div>
+
+    <div class="px-6 pb-6 pt-2 text-xs text-gray-500 text-center flex-shrink-0">
+      <i class="fas fa-info-circle text-teal-600 mr-1"></i>
+      Edit the drawing above to customize your fork
+    </div>
+  {:else if isBinary}
     <!-- Binary/Non-editable Content Preview -->
     <div class="px-6 pt-6 pb-2 flex items-center justify-between flex-shrink-0">
       <label class="text-sm font-medium text-gray-700">Preview</label>

@@ -20,6 +20,7 @@
   import ImageRenderer from './renderers/ImageRenderer.svelte'
   import CsvRenderer from './renderers/CsvRenderer.svelte'
   import ArchiveRenderer from './renderers/ArchiveRenderer.svelte'
+  import ExcalidrawRenderer from './renderers/ExcalidrawRenderer.svelte'
 
   const dispatch = createEventDispatcher()
 
@@ -473,6 +474,12 @@
             {showSyntaxHighlighting}
             {showLineNumbers}
             {fontSize}
+          />
+        {:else if processed.type === 'excalidraw'}
+          <ExcalidrawRenderer
+            {processed}
+            {relicId}
+            {relic}
           />
         {:else}
           <div class="border-t border-gray-200 p-6 text-center">

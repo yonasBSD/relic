@@ -7,6 +7,7 @@ import hljs from 'highlight.js'
 import { processMarkdown } from './markdownProcessor.js'
 import { processPDF } from './pdfProcessor.js'
 import { processArchive } from './archiveProcessor.js'
+import { processExcalidraw } from './excalidrawProcessor.js'
 import { detectLanguageHint, isCodeType, getFileTypeDefinition } from './typeUtils.js'
 
 /**
@@ -193,6 +194,8 @@ export async function processContent(content, contentType, languageHint) {
       return processImage(content, contentType)
     case 'archive':
       return processArchive(content, contentType)
+    case 'excalidraw':
+      return processExcalidraw(content, contentType)
     case 'code':
       return processCode(content, contentType, languageHint)
     case 'text':
