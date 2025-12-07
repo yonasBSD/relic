@@ -97,3 +97,37 @@ class ReportResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class CommentBase(BaseModel):
+    """Base comment schema."""
+    content: str
+    line_number: int
+
+
+class CommentCreate(CommentBase):
+    """Comment creation schema."""
+    parent_id: Optional[str] = None
+
+
+class CommentUpdate(BaseModel):
+    """Comment update schema."""
+    content: str
+
+
+class CommentResponse(CommentBase):
+    """Comment response schema."""
+    id: str
+    relic_id: str
+    client_id: Optional[str] = None
+    author_name: Optional[str] = None
+    created_at: datetime
+    parent_id: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ClientNameUpdate(BaseModel):
+    """Schema for updating client name."""
+    name: str

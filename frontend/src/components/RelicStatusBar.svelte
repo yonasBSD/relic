@@ -6,6 +6,7 @@
   export let isFullWidth
   export let showSyntaxHighlighting
   export let showLineNumbers
+  export let showComments = true
   export let showSource = false
   export let pdfState = null
   export let fontSize = 13
@@ -73,6 +74,13 @@
           title="Toggle line numbers"
         >
           <i class="fas fa-list-ol text-xs"></i>
+        </button>
+        <button
+          on:click={() => dispatch('toggle-comments')}
+          class="px-2 py-1 rounded text-xs font-medium transition-colors {showComments ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}"
+          title="Toggle comments"
+        >
+          <i class="fas fa-comment-alt text-[10px]"></i>
         </button>
 
         <!-- Font Size Combo Box -->

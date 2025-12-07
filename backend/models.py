@@ -1,7 +1,7 @@
 """Database models for the relic application."""
 from sqlalchemy import Column, String, Integer, DateTime, LargeBinary, ForeignKey, Boolean, JSON, Text, Table, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from datetime import datetime
 import uuid
 
@@ -66,6 +66,7 @@ class ClientKey(Base):
     __tablename__ = "client_key"
 
     id = Column(String(32), primary_key=True)  # 32-char hex client ID
+    name = Column(String, nullable=True)  # User's display name
     created_at = Column(DateTime, default=datetime.utcnow)
     relic_count = Column(Integer, default=0)
 
@@ -114,5 +115,23 @@ class RelicReport(Base):
     # Optional: track reporter if authenticated (not strictly required by spec but good practice)
     # reporter_id = Column(String, ForeignKey('client_key.id'), nullable=True)
 
-    # Relationships
+        # Relationships
     relic = relationship("Relic", backref="reports")
+
+
+class Comment(Base):
+    """Comment model for line-specific comments on relics."""
+    __tablename__ = "comment"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    relic_id = Column(String(32), ForeignKey('relic.id'), nullable=False, index=True)
+    client_id = Column(String(32), ForeignKey('client_key.id'), nullable=True)
+    line_number = Column(Integer, nullable=False)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    parent_id = Column(String, ForeignKey('comment.id'), nullable=True)
+
+    # Relationships
+    relic = relationship("Relic", backref="comments")
+    client = relationship("ClientKey", backref="comments")
+    replies = relationship("Comment", backref=backref("parent", remote_side=[id]), cascade="all, delete-orphan")

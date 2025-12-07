@@ -9,7 +9,7 @@
   import AdminPanel from "./components/AdminPanel.svelte";
   import Toast from "./components/Toast.svelte";
   import { toastStore } from "./stores/toastStore";
-  import { getOrCreateClientKey, checkAdminStatus } from "./services/api";
+  import { getOrCreateClientKey, checkAdminStatus, updateClientName, registerClient } from "./services/api";
   import { showToast } from "./stores/toastStore";
 
   let currentSection = "new";
@@ -18,6 +18,8 @@
   let showKeyDropdown = false;
   let relicViewerFullWidth = false;
   let isAdmin = false;
+  let clientName = "";
+  let isNameSaving = false;
 
   function updateRouting() {
     const path = window.location.pathname;
@@ -72,7 +74,17 @@
 
   onMount(async () => {
     // Initialize client key on app start
-    getOrCreateClientKey();
+    const key = getOrCreateClientKey();
+    
+    // Register/Fetch client info
+    try {
+        const clientInfo = await registerClient(key);
+        if (clientInfo && clientInfo.name) {
+            clientName = clientInfo.name;
+        }
+    } catch (e) {
+        console.error("Failed to fetch client info", e);
+    }
 
     // Check admin status
     try {
@@ -96,6 +108,20 @@
     window.addEventListener("popstate", updateRouting);
     return () => window.removeEventListener("popstate", updateRouting);
   });
+
+  async function saveClientName() {
+    if (!clientName.trim()) return;
+    isNameSaving = true;
+    try {
+        await updateClientName(clientName);
+        showToast("Name updated successfully", "success");
+    } catch (error) {
+        console.error("Failed to update name:", error);
+        showToast("Failed to update name", "error");
+    } finally {
+        isNameSaving = false;
+    }
+  }
 
   function handleNavigation(section) {
     currentSection = section;
@@ -287,7 +313,7 @@
 
             {#if showKeyDropdown}
               <div
-                class="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+                class="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
               >
                 <div class="p-3 border-b border-gray-200">
                   <p class="text-sm font-medium text-gray-900">
@@ -296,6 +322,31 @@
                   <p class="text-xs text-gray-500 mt-1">
                     Backup your key to access your relics from any device
                   </p>
+                </div>
+
+                <div class="p-3 border-b border-gray-200">
+                    <label class="block text-xs font-medium text-gray-700 mb-1">Display Name</label>
+                    <div class="flex gap-2">
+                        <input 
+                            type="text" 
+                            bind:value={clientName} 
+                            placeholder="Anonymous"
+                            class="flex-1 text-sm text-gray-900 border border-gray-300 rounded px-2 py-1 focus:outline-none focus:border-blue-500"
+                        />
+                        <button 
+                            on:click={saveClientName}
+                            disabled={isNameSaving}
+                            class="w-8 h-[30px] flex items-center justify-center bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 flex-shrink-0"
+                            title="Save Name"
+                        >
+                            {#if isNameSaving}
+                                <i class="fas fa-spinner fa-spin text-xs"></i>
+                            {:else}
+                                <i class="fas fa-check text-xs"></i>
+                            {/if}
+                        </button>
+                    </div>
+                    <p class="text-[10px] text-gray-500 mt-1">Required for commenting</p>
                 </div>
 
                 <div class="py-2">

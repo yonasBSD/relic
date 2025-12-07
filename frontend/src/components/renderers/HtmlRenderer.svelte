@@ -6,8 +6,10 @@
   export let relicId
   export let showSyntaxHighlighting
   export let showLineNumbers
+  export let showComments = true
   export let showSource = false
   export let fontSize = 13
+  export let comments = []
 
   const dispatch = createEventDispatcher()
 
@@ -38,11 +40,17 @@
       noWrapper={true}
       {showSyntaxHighlighting}
       {showLineNumbers}
+      {showComments}
       {fontSize}
+      {comments}
       on:line-clicked={forwardEvent}
       on:line-range-selected={forwardEvent}
       on:multi-line-selected={forwardEvent}
       on:line-copied={forwardEvent}
+      on:createComment={forwardEvent}
+      on:updateComment={forwardEvent}
+      on:deleteComment={forwardEvent}
+      on:toggle-comments={forwardEvent}
     />
   {/if}
 </div>

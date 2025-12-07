@@ -341,3 +341,12 @@ code {
   width: 18px !important;
   height: 18px !important;
 }
+
+/* Markdown Body Styles */
+.markdown-body p { margin-bottom: 0.5em; }
+.markdown-body pre { background: #f3f4f6; padding: 8px; border-radius: 4px; overflow-x: auto; }
+.markdown-body code { font-family: monospace; background: #f3f4f6; padding: 2px 4px; border-radius: 2px; }
+.markdown-body blockquote { border-left: 3px solid #e5e7eb; padding-left: 8px; color: #6b7280; }
+.markdown-body ul, .markdown-body ol { padding-left: 20px; margin-bottom: 0.5em; list-style-type: disc; }
+.markdown-body ol { list-style-type: decimal; }
+.markdown-body a { color: #2563eb; text-decoration: underline; }

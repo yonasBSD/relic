@@ -8,6 +8,10 @@
     checkBookmark,
     deleteRelic,
     checkAdminStatus,
+    getComments,
+    createComment,
+    updateComment,
+    deleteComment
   } from "../services/api";
   import { processContent } from "../services/processors";
   import { processArchive } from "../services/archiveProcessor";
@@ -51,6 +55,7 @@
   let pdfState = { currentPage: 1, numPages: 0, scale: 1.5, loading: false };
   let isAdmin = false;
   let deleteLoading = false;
+  let comments = [];
 
   // Update PDF state periodically
   let pdfStateInterval;
@@ -88,6 +93,14 @@
   let showLineNumbers = (() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("relic_editor_line_numbers");
+      return saved === "false" ? false : true;
+    }
+    return true;
+  })();
+
+  let showComments = (() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("relic_editor_show_comments");
       return saved === "false" ? false : true;
     }
     return true;
@@ -139,7 +152,61 @@
   }
 
   $: if (typeof window !== "undefined") {
+    localStorage.setItem(
+      "relic_editor_show_comments",
+      showComments.toString(),
+    );
+  }
+
+  $: if (typeof window !== "undefined") {
     localStorage.setItem("relic_editor_font_size", fontSize.toString());
+  }
+
+  async function loadComments(id) {
+    try {
+      comments = await getComments(id);
+    } catch (error) {
+      console.error("Failed to load comments:", error);
+    }
+  }
+
+  async function handleCreateComment(event) {
+    const { lineNumber, content, parentId } = event.detail;
+    try {
+      const newComment = await createComment(relicId, lineNumber, content, parentId);
+      comments = [...comments, newComment];
+      showToast("Comment added", "success");
+    } catch (error) {
+      console.error("Error creating comment:", error);
+      if (error.response && error.response.data && error.response.data.detail) {
+        showToast(error.response.data.detail, "error");
+      } else {
+        showToast("Failed to add comment", "error");
+      }
+    }
+  }
+
+  async function handleUpdateComment(event) {
+    const { commentId, content } = event.detail;
+    try {
+      const updatedComment = await updateComment(relicId, commentId, content);
+      comments = comments.map(c => c.id === commentId ? updatedComment : c);
+      showToast("Comment updated", "success");
+    } catch (error) {
+      console.error("Error updating comment:", error);
+      showToast("Failed to update comment", "error");
+    }
+  }
+
+  async function handleDeleteComment(event) {
+    const commentId = event.detail;
+    try {
+      await deleteComment(relicId, commentId);
+      comments = comments.filter(c => c.id !== commentId);
+      showToast("Comment deleted", "success");
+    } catch (error) {
+      showToast("Failed to delete comment", "error");
+    }
   }
 
   async function loadRelic(id) {
@@ -171,6 +238,9 @@
 
       // Check bookmark status
       await checkBookmarkStatus(id);
+
+      // Load comments
+      await loadComments(id);
 
       console.log("[RelicViewer] Relic loaded successfully");
     } catch (error) {
@@ -440,6 +510,7 @@
         {isFullWidth}
         {showSyntaxHighlighting}
         {showLineNumbers}
+        {showComments}
         {showSource}
         {pdfState}
         {fontSize}
@@ -447,6 +518,7 @@
         on:toggle-syntax={() =>
           (showSyntaxHighlighting = !showSyntaxHighlighting)}
         on:toggle-linenumbers={() => (showLineNumbers = !showLineNumbers)}
+        on:toggle-comments={() => (showComments = !showComments)}
         on:toggle-source={(e) => (showSource = e.detail)}
         on:update-font-size={(e) => (fontSize = e.detail)}
         on:pdf-zoom-in={() => pdfViewerRef?.zoomInMethod()}
@@ -497,11 +569,16 @@
             {showSource}
             {showSyntaxHighlighting}
             {showLineNumbers}
+            {showComments}
             {fontSize}
+            {comments}
             on:line-clicked={handleLineClicked}
             on:line-range-selected={handleLineRangeSelected}
             on:multi-line-selected={handleMultiLineSelected}
             on:line-copied={handleLineCopied}
+            on:createComment={handleCreateComment}
+            on:deleteComment={handleDeleteComment}
+            on:toggle-comments={() => (showComments = !showComments)}
           />
         {:else if processed.type === "html"}
           <HtmlRenderer
@@ -510,11 +587,17 @@
             {showSource}
             {showSyntaxHighlighting}
             {showLineNumbers}
+            {showComments}
             {fontSize}
+            {comments}
             on:line-clicked={handleLineClicked}
             on:line-range-selected={handleLineRangeSelected}
             on:multi-line-selected={handleMultiLineSelected}
             on:line-copied={handleLineCopied}
+            on:createComment={handleCreateComment}
+            on:updateComment={handleUpdateComment}
+            on:deleteComment={handleDeleteComment}
+            on:toggle-comments={() => (showComments = !showComments)}
           />
         {:else if processed.type === "code" || processed.type === "text"}
           <CodeRenderer
@@ -522,11 +605,17 @@
             {relicId}
             {showSyntaxHighlighting}
             {showLineNumbers}
+            {showComments}
             {fontSize}
+            {comments}
             on:line-clicked={handleLineClicked}
             on:line-range-selected={handleLineRangeSelected}
             on:multi-line-selected={handleMultiLineSelected}
             on:line-copied={handleLineCopied}
+            on:createComment={handleCreateComment}
+            on:updateComment={handleUpdateComment}
+            on:deleteComment={handleDeleteComment}
+            on:toggle-comments={() => (showComments = !showComments)}
           />
         {:else if processed.type === "image"}
           <ImageRenderer {processed} relicName={relic.name} />

@@ -26,22 +26,11 @@ function getOrCreateClientKey() {
     clientKey = generateClientKey()
     setClientKey(clientKey)
     // Register with server
-    registerClient(clientKey)
+    registerClient(clientKey).catch(err => {
+      console.error('[API] Background registration failed:', err)
+    })
   }
   return clientKey
-}
-
-async function registerClient(clientKey) {
-  try {
-    const response = await axios.post(`${API_BASE_URL}/client/register`, {}, {
-      headers: { 'X-Client-Key': clientKey }
-    })
-    console.log('[API] Client registered successfully:', response.data)
-  } catch (error) {
-    console.error('[API] Client registration failed:', error)
-    // Don't remove the client key from localStorage on registration failure
-    // The user might still be able to use it if the server is temporarily unavailable
-  }
 }
 
 const api = axios.create({
@@ -58,9 +47,10 @@ api.interceptors.request.use((config) => {
   // Only add client key to protected endpoints
   const needsAuth = (url, method) => {
     const protectedPatterns = [
-      { endpoint: '/relics', methods: ['POST', 'DELETE'] },
+      { endpoint: '/relics', methods: ['POST', 'DELETE', 'PUT'] },
       { endpoint: '/edit', methods: ['POST'] },
       { endpoint: 'client/relics', methods: ['GET'] },
+      { endpoint: '/client/name', methods: ['PUT'] },
       { endpoint: '/bookmarks', methods: ['GET', 'POST', 'DELETE'] },
       { endpoint: '/admin/', methods: ['GET', 'POST', 'DELETE'] }
     ]
@@ -234,6 +224,51 @@ export async function getAdminReports(limit = 100, offset = 0) {
 
 export async function deleteReport(reportId) {
   return api.delete(`/admin/reports/${reportId}`)
+}
+
+// Client endpoints
+export async function updateClientName(name) {
+  return api.put('/client/name', { name })
+}
+
+export async function registerClient(clientKey) {
+  try {
+    const response = await api.post(`/client/register`, {}, {
+      headers: { 'X-Client-Key': clientKey }
+    })
+    console.log('[API] Client registered successfully:', response.data)
+    return response.data
+  } catch (error) {
+    console.error('[API] Client registration failed:', error)
+    throw error
+  }
+}
+
+// Comment endpoints
+export async function getComments(relicId) {
+  const response = await api.get(`/relics/${relicId}/comments`)
+  return response.data
+}
+
+export async function createComment(relicId, lineNumber, content, parentId = null) {
+  const response = await api.post(`/relics/${relicId}/comments`, {
+    line_number: lineNumber,
+    content,
+    parent_id: parentId
+  })
+  return response.data
+}
+
+export async function updateComment(relicId, commentId, content) {
+  const response = await api.put(`/relics/${relicId}/comments/${commentId}`, {
+    content
+  })
+  return response.data
+}
+
+export async function deleteComment(relicId, commentId) {
+  const response = await api.delete(`/relics/${relicId}/comments/${commentId}`)
+  return response.data
 }
 
 // Export client key functions for components that need them
