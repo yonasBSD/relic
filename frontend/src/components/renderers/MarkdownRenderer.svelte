@@ -10,6 +10,7 @@
   export let showSource = false
   export let fontSize = 13
   export let comments = []
+  export let isAdmin = false
 
   const dispatch = createEventDispatcher()
 
@@ -38,6 +39,7 @@
       {showComments}
       {fontSize}
       {comments}
+      {isAdmin}
       on:line-clicked={forwardEvent}
       on:line-range-selected={forwardEvent}
       on:multi-line-selected={forwardEvent}

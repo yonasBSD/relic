@@ -24,6 +24,7 @@
   export let showComments = true
   export let fontSize = 13
   export let comments = []
+  export let isAdmin = false
 
   let container
   let editor
@@ -397,6 +398,8 @@
                                 <button class="comment-tool-btn quote-btn" title="Quote"><i class="fas fa-quote-right"></i></button>
                                 ${isAuthor ? `
                                 <button class="comment-tool-btn edit-btn" title="Edit"><i class="fas fa-pen"></i></button>
+                                ` : ''}
+                                ${isAuthor || isAdmin ? `
                                 <button class="comment-delete" data-id="${comment.id}" title="Delete"><i class="fas fa-times"></i></button>
                                 ` : ''}
                             </div>
@@ -426,9 +429,14 @@
                     };
                 }
                 
+                if (isAuthor || isAdmin) {
+                    const deleteBtn = commentEl.querySelector('.comment-delete');
+                    if (deleteBtn) deleteBtn.onclick = () => dispatch('deleteComment', comment.id)
+                }
+
                 if (isAuthor) {
-                    commentEl.querySelector('.comment-delete').onclick = () => dispatch('deleteComment', comment.id)
-                    commentEl.querySelector('.edit-btn').onclick = () => {
+                    const editBtn = commentEl.querySelector('.edit-btn');
+                    if (editBtn) editBtn.onclick = () => {
                         activeEditInput = { commentId: comment.id }
                         updateCommentZones()
                     }

@@ -572,6 +572,7 @@
             {showComments}
             {fontSize}
             {comments}
+            {isAdmin}
             on:line-clicked={handleLineClicked}
             on:line-range-selected={handleLineRangeSelected}
             on:multi-line-selected={handleMultiLineSelected}
@@ -590,6 +591,7 @@
             {showComments}
             {fontSize}
             {comments}
+            {isAdmin}
             on:line-clicked={handleLineClicked}
             on:line-range-selected={handleLineRangeSelected}
             on:multi-line-selected={handleMultiLineSelected}
@@ -608,6 +610,7 @@
             {showComments}
             {fontSize}
             {comments}
+            {isAdmin}
             on:line-clicked={handleLineClicked}
             on:line-range-selected={handleLineRangeSelected}
             on:multi-line-selected={handleMultiLineSelected}
