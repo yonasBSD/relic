@@ -1,6 +1,9 @@
 # Backend Dockerfile - Development with live reload
 FROM python:3.13-slim
 
+# Accept version as build arg (will be git hash for local builds)
+ARG VERSION=dev
+
 WORKDIR /app
 
 # Install system dependencies
@@ -16,6 +19,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy backend code (will be overridden by mount in dev)
 COPY backend/ ./backend/
+
+# Set version as environment variable
+ENV APP_VERSION=${VERSION}
 
 # Expose port for FastAPI
 EXPOSE 8000

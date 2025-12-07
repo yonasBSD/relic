@@ -11,7 +11,7 @@ class Settings(BaseSettings):
 
     # App
     APP_NAME: str = "Relic"
-    APP_VERSION: str = "1.0.0"
+    APP_VERSION: str = os.getenv("APP_VERSION", "dev")
     DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
 
     # Database

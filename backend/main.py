@@ -79,6 +79,12 @@ async def health():
     return {"status": "ok"}
 
 
+@app.get("/api/v1/version")
+async def get_version():
+    """Get application version."""
+    return {"version": settings.APP_VERSION}
+
+
 @app.post("/api/v1/client/register", response_model=dict)
 async def register_client(request: Request, db: Session = Depends(get_db)):
     """

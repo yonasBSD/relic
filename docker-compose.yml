@@ -18,6 +18,8 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+      args:
+        VERSION: ${GIT_HASH:-dev}
     container_name: Relic-backend
     expose:
       - "8000"

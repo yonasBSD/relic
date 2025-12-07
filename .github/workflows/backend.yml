@@ -29,6 +29,8 @@ jobs:
           context: .
           file: ./backend/Dockerfile.prod
           push: true
+          build-args: |
+            VERSION=${{ github.ref_name }}
           tags: |
             ghcr.io/${{ github.repository }}/backend:${{ github.ref_name }}
             ghcr.io/${{ github.repository }}/backend:latest

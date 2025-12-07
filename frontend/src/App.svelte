@@ -9,7 +9,7 @@
   import AdminPanel from "./components/AdminPanel.svelte";
   import Toast from "./components/Toast.svelte";
   import { toastStore } from "./stores/toastStore";
-  import { getOrCreateClientKey, checkAdminStatus, updateClientName, registerClient } from "./services/api";
+  import { getOrCreateClientKey, checkAdminStatus, updateClientName, registerClient, getVersion } from "./services/api";
   import { showToast } from "./stores/toastStore";
 
   let currentSection = "new";
@@ -20,6 +20,7 @@
   let isAdmin = false;
   let clientName = "";
   let isNameSaving = false;
+  let appVersion = "loading...";
 
   function updateRouting() {
     const path = window.location.pathname;
@@ -75,7 +76,16 @@
   onMount(async () => {
     // Initialize client key on app start
     const key = getOrCreateClientKey();
-    
+
+    // Fetch app version
+    try {
+      const response = await getVersion();
+      appVersion = response.data.version;
+    } catch (error) {
+      console.error("[App] Failed to fetch version:", error);
+      appVersion = "unknown";
+    }
+
     // Register/Fetch client info
     try {
         const clientInfo = await registerClient(key);
@@ -242,7 +252,7 @@
             RELIC <span class="font-light opacity-80">Bin</span>
           </div>
           <span class="text-xs bg-black/20 px-2 py-0.5 rounded text-white/70"
-            >v1.0.0</span
+            >{appVersion}</span
           >
         </div>
 

@@ -41,7 +41,7 @@ help:
 # Start all containers in development mode
 up:
 	@echo "Starting Relic services..."
-	docker compose up -d
+	GIT_HASH=$$(git rev-parse --short HEAD 2>/dev/null || echo "dev") docker compose up -d
 	@echo ""
 	@echo "✓ Services started!"
 	@echo ""
@@ -81,7 +81,7 @@ restart: down up
 # Build images without starting
 build:
 	@echo "Building Docker images..."
-	docker compose build
+	GIT_HASH=$$(git rev-parse --short HEAD 2>/dev/null || echo "dev") docker compose build
 	@echo "✓ Images built"
 
 # Rebuild images and start containers

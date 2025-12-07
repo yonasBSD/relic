@@ -76,6 +76,10 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+export async function getVersion() {
+  return api.get('/version')
+}
+
 export async function createRelic(formData) {
   const data = new FormData()
   if (formData.file) {
