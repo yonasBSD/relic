@@ -101,7 +101,7 @@ create_config() {
     fi
 
     if [ ! -f "$CONFIG_DIR/config" ]; then
-        local server="${RELIC_SERVER:-http://localhost}"
+        local server="${RELIC_SERVER:-https://localhost}"
         cat > "$CONFIG_DIR/config" <<EOF
 [core]
     server = $server
