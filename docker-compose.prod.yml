@@ -2,8 +2,8 @@ services:
   # Frontend (Nginx + Static Files)
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile.prod
+      context: .
+      dockerfile: frontend/Dockerfile.prod
     container_name: Relic-frontend
     ports:
       - "80:80"

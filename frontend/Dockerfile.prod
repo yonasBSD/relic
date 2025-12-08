@@ -1,4 +1,5 @@
 # Frontend Production Dockerfile
+# Build context should be project root: docker build -f frontend/Dockerfile.prod .
 
 # Stage 1: Build
 FROM node:20-alpine AS builder
@@ -6,11 +7,11 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Install dependencies
-COPY package*.json ./
+COPY frontend/package*.json ./
 RUN npm ci
 
 # Copy source code
-COPY . .
+COPY frontend/ ./
 
 # Build the application
 # We set VITE_API_URL to /api so it works with the Nginx proxy
@@ -24,11 +25,12 @@ FROM nginx:alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Copy custom Nginx configuration
-COPY nginx.prod.conf /etc/nginx/conf.d/default.conf
+COPY frontend/nginx.prod.conf /etc/nginx/conf.d/default.conf
 
 # Copy CLI installation script (downloads binaries from GitHub releases)
 RUN mkdir -p /app/cli
-COPY ../cli/install.sh /app/cli/install.sh
+COPY cli/install.sh /app/cli/install.sh
+RUN chmod 644 /app/cli/install.sh
 
 # Expose port 80
 EXPOSE 80

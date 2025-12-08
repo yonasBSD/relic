@@ -23,12 +23,9 @@ coverage.xml
 .pytest_cache/
 .mypy_cache/
 
-# Ignore frontend directory for backend build
-frontend/
+# Keep build lightweight - only exclude what's not needed for any build
 docs/
-cli/
 tests/
-sync/
 nginx.conf
 docker-compose.yml
 docker-compose.prod.yml
@@ -37,3 +34,8 @@ README.md
 RELIC.md
 CONTAINERS.md
 CLAUDE.md
+
+# Exclude CLI binaries but keep install.sh
+cli/client/bin/
+cli/client/pkg/
+cli/client/.git/
