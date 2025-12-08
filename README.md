@@ -97,6 +97,21 @@ make up
 make down
 ```
 
+## Production Deployment
+
+For production environments, use the `docker-compose.prod.yml` configuration which includes optimizations, Nginx configuration, and restart policies.
+
+1. **Configure Environment**
+   Review `docker-compose.prod.yml` and update environment variables if needed (especially passwords and secret keys).
+
+2. **Start Services**
+   ```bash
+   docker compose -f docker-compose.prod.yml up -d --build
+   ```
+
+3. **Verify Deployment**
+   The application will be available on port 80.
+
 ## Relic Indexes
 
 Relic indexes (`.rix` files) allow you to create curated collections of relics.
