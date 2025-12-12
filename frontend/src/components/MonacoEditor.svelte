@@ -931,10 +931,6 @@
       
       const lines = Array.from(highlightedLineNumbers)
       const decorations = lines.map(lineNumber => {
-        const hasComment = linesWithComments.has(lineNumber)
-        const hasInput = activeCommentInputs.has(lineNumber)
-        const hideGlyph = hasComment || (showComments && hasInput)
-
         return {
             range: {
                 startLineNumber: lineNumber,
@@ -944,8 +940,8 @@
             },
             options: {
                 isWholeLine: true,
-                className: 'line-number-highlight',
-                glyphMarginClassName: hideGlyph ? undefined : 'line-number-glyph'
+                className: 'line-number-highlight'
+                // Don't use glyphMarginClassName here to allow comment icons to show on hover
             }
         }
       })
