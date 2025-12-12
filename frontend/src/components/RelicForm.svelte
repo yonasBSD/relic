@@ -268,9 +268,12 @@
               // But for batch uploads, auto-detect per file is safer.
               // Let's stick to auto-detect for files, or the file's own type.
 
+              // For single file uploads, use the title if provided, otherwise use filename
+              const fileName = uploadedFiles.length === 1 && title ? title : file.name;
+
               const response = await createRelic({
                 file: file,
-                name: file.name, // Use filename as title for batch uploads
+                name: fileName,
                 content_type: fileContentType || undefined,
                 language_hint: fileSyntax !== "auto" ? fileSyntax : undefined,
                 access_level: visibility,
