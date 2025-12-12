@@ -25,9 +25,11 @@
   export let fontSize = 13
   export let comments = []
   export let isAdmin = false
+  export let ansiDecorations = [] // ANSI color decorations
 
   let container
   let editor
+  let ansiDecorationIds = [] // Track ANSI decoration IDs
   let highlightedLines = []
   let highlightedLineNumbers = new Set()
   let currentFragment = null
@@ -139,6 +141,11 @@
       if (relicId) {
         checkLineNumberFragment()
       }
+
+      // Apply ANSI decorations if provided
+      if (ansiDecorations && ansiDecorations.length > 0) {
+        applyAnsiDecorations()
+      }
     } catch (e) {
       console.error('Failed to create Monaco Editor:', e)
     }
@@ -148,6 +155,11 @@
     }
   })
 
+  // Apply ANSI decorations when they change
+  $: if (editor && ansiDecorations) {
+    applyAnsiDecorations()
+  }
+
   $: if (editor && comments) {
     updateCommentDecorations()
     updateCommentZones()
@@ -156,6 +168,141 @@
   $: if (editor && (showComments !== undefined)) {
     updateCommentDecorations()
     updateCommentZones()
+  }
+
+  /**
+   * Apply ANSI color decorations to Monaco Editor with full SGR support
+   * Converts character-based ranges to line/column positions
+   */
+  function applyAnsiDecorations() {
+    if (!editor) return
+
+    const model = editor.getModel()
+    if (!model) return
+
+    // Clear previous ANSI decorations
+    ansiDecorationIds = editor.deltaDecorations(ansiDecorationIds, [])
+
+    // If no decorations provided, just clear and return
+    if (!ansiDecorations || ansiDecorations.length === 0) {
+      return
+    }
+
+    // Convert character offsets to Monaco positions and create decorations
+    const monacoDecorations = ansiDecorations.map(decoration => {
+      const { range, options } = decoration
+      const startPos = model.getPositionAt(range.start)
+      const endPos = model.getPositionAt(range.end)
+
+      // Generate unique class name based on all active styles
+      // Use a simple hash to avoid btoa encoding issues
+      const styleHash = JSON.stringify(options)
+      let hash = 0
+      for (let i = 0; i < styleHash.length; i++) {
+        hash = ((hash << 5) - hash) + styleHash.charCodeAt(i)
+        hash = hash & hash // Convert to 32bit integer
+      }
+      const classId = 'ansi-' + Math.abs(hash).toString(36)
+
+      // Store style for CSS generation
+      if (!window.__ansiStyles) window.__ansiStyles = new Map()
+      window.__ansiStyles.set(classId, options)
+
+      return {
+        range: new monaco.Range(
+          startPos.lineNumber,
+          startPos.column,
+          endPos.lineNumber,
+          endPos.column
+        ),
+        options: {
+          inlineClassName: classId
+        }
+      }
+    })
+
+    // Apply the new decorations
+    ansiDecorationIds = editor.deltaDecorations([], monacoDecorations)
+
+    // Inject CSS for all ANSI styles
+    injectAnsiStyles()
+  }
+
+  /**
+   * Inject CSS styles for all ANSI decorations dynamically
+   */
+  function injectAnsiStyles() {
+    const styleId = 'ansi-styles'
+    let styleElement = document.getElementById(styleId)
+
+    if (!styleElement) {
+      styleElement = document.createElement('style')
+      styleElement.id = styleId
+      document.head.appendChild(styleElement)
+    }
+
+    // Generate CSS for all stored ANSI styles
+    let css = ''
+    if (window.__ansiStyles) {
+      window.__ansiStyles.forEach((options, classId) => {
+        const styles = []
+
+        // Handle reverse video by swapping colors BEFORE applying
+        let fgColor = options.color
+        let bgColor = options.backgroundColor
+
+        if (options.reverse) {
+          // Swap foreground and background
+          const temp = fgColor || '#CCCCCC'
+          fgColor = bgColor || 'transparent'
+          bgColor = temp
+          if (fgColor === 'transparent') fgColor = '#1E1E1E'
+        }
+
+        // Apply colors
+        if (fgColor) {
+          styles.push(`color: ${fgColor}`)
+        }
+        if (bgColor) {
+          styles.push(`background-color: ${bgColor}`)
+        }
+
+        // Apply text styles
+        if (options.bold) {
+          styles.push('font-weight: bold')
+        }
+        if (options.dim) {
+          styles.push('opacity: 0.6')
+        }
+        if (options.italic) {
+          styles.push('font-style: italic')
+        }
+
+        // Handle text-decoration (can combine underline + strikethrough)
+        const decorations = []
+        if (options.underline) decorations.push('underline')
+        if (options.strikethrough) decorations.push('line-through')
+        if (decorations.length > 0) {
+          styles.push(`text-decoration: ${decorations.join(' ')}`)
+        }
+
+        if (options.blink) {
+          styles.push('animation: blink 1s step-end infinite')
+        }
+        if (options.hidden) {
+          styles.push('opacity: 0')
+        }
+
+        if (styles.length > 0) {
+          css += `.${classId} { ${styles.join('; ')} !important; }\n`
+        }
+      })
+    }
+
+    // Add blink animation
+    css += '@keyframes blink { 50% { opacity: 0; } }\n'
+
+    styleElement.textContent = css
   }
 
   function updateCommentDecorations() {
@@ -913,7 +1060,11 @@
   $: if (editor) {
     const model = editor.getModel()
     if (model) {
-      if (!showSyntaxHighlighting) {
+      // If ANSI decorations are present, always use plaintext to avoid conflicts
+      // Otherwise, respect the showSyntaxHighlighting setting
+      if (ansiDecorations && ansiDecorations.length > 0) {
+        monaco.editor.setModelLanguage(model, 'plaintext')
+      } else if (!showSyntaxHighlighting) {
         // Disable by changing language to plaintext (no syntax highlighting)
         monaco.editor.setModelLanguage(model, 'plaintext')
       } else {

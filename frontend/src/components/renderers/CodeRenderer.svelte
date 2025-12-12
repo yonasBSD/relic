@@ -34,6 +34,7 @@
     {fontSize}
     {comments}
     {isAdmin}
+    ansiDecorations={showSyntaxHighlighting && processed.hasAnsiCodes ? (processed.ansiDecorations || []) : []}
     on:line-clicked={forwardEvent}
     on:line-range-selected={forwardEvent}
     on:multi-line-selected={forwardEvent}
