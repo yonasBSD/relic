@@ -113,9 +113,21 @@
     // Initial routing on page load
     updateRouting();
 
+    // Close credentials dropdown when clicking outside
+    function handleDocumentClick(e) {
+      if (showKeyDropdown && !e.target.closest(".client-key-dropdown")) {
+        showKeyDropdown = false;
+      }
+    }
+
+    document.addEventListener("click", handleDocumentClick);
+
     // Listen for popstate to handle browser back/forward
     window.addEventListener("popstate", updateRouting);
-    return () => window.removeEventListener("popstate", updateRouting);
+    return () => {
+      window.removeEventListener("popstate", updateRouting);
+      document.removeEventListener("click", handleDocumentClick);
+    };
   });
 
   async function saveClientName() {
@@ -319,6 +331,7 @@
             {#if showKeyDropdown}
               <div
                 class="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+                on:click={e => e.stopPropagation()}
               >
                 <div class="p-3 border-b border-gray-200">
                   <p class="text-sm font-medium text-gray-900">
