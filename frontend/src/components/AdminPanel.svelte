@@ -21,13 +21,13 @@
         getTypeIconColor,
         formatBytes,
         formatTimeAgo,
-        copyRelicId,
     } from "../services/typeUtils";
     import {
         shareRelic,
         copyRelicContent,
         downloadRelic,
         viewRaw,
+        copyToClipboard,
     } from "../services/relicActions";
 
     let isAdmin = false;
@@ -589,7 +589,7 @@
                                                 >
                                                 <button
                                                     on:click|stopPropagation={() =>
-                                                        copyRelicId(relic.id)}
+                                                        copyToClipboard(relic.id, 'Relic ID copied to clipboard!')}
                                                     class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 transition-all"
                                                     title="Copy ID"
                                                 >

@@ -1176,13 +1176,6 @@ export function formatTimeAgo(dateString) {
   return `${Math.floor(diffInSeconds / 86400)}d ago`
 }
 
-// Copy relic ID to clipboard
-export function copyRelicId(relicId) {
-  navigator.clipboard.writeText(relicId).then(() => {
-    // Could add toast notification here if desired
-  })
-}
-
 // Get default items per page based on screen size
 export function getDefaultItemsPerPage() {
   if (typeof window === 'undefined') return 20

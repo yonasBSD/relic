@@ -1,6 +1,6 @@
 <script>
-  import { shareRelic, copyRelicContent, downloadRelic, viewRaw, fastForkRelic } from '../services/relicActions'
-  import { getTypeLabel, getTypeIcon, getTypeIconColor, formatBytes, copyRelicId, formatTimeAgo } from '../services/typeUtils'
+  import { shareRelic, copyRelicContent, downloadRelic, viewRaw, fastForkRelic, copyToClipboard } from '../services/relicActions'
+  import { getTypeLabel, getTypeIcon, getTypeIconColor, formatBytes, formatTimeAgo } from '../services/typeUtils'
 
   // Props
   export let data = [] // Array of relics/bookmarks
@@ -121,7 +121,7 @@
                   <div class="flex items-center group gap-1">
                     <span class="text-xs text-gray-400 font-mono">{relic.id}</span>
                     <button
-                      on:click|stopPropagation={() => copyRelicId(relic.id)}
+                      on:click|stopPropagation={() => copyToClipboard(relic.id, 'Relic ID copied to clipboard!')}
                       class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 transition-all duration-200 -mt-0.5"
                       title="Copy ID"
                     >

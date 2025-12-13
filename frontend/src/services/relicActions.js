@@ -1,69 +1,14 @@
 import { getRelicRaw, forkRelic } from './api'
 import { showToast } from '../stores/toastStore'
+import { getFileTypeDefinition } from './typeUtils'
 
 export function getFileExtension(contentType) {
   if (!contentType) return 'txt'
 
-  const extensionMap = {
-    'text/plain': 'txt',
-    'text/markdown': 'md',
-    'text/html': 'html',
-    'text/css': 'css',
-    'text/javascript': 'js',
-    'application/javascript': 'js',
-    'text/x-javascript': 'js',
-    'application/json': 'json',
-    'text/xml': 'xml',
-    'application/xml': 'xml',
-    'text/x-python': 'py',
-    'application/x-python': 'py',
-    'text/x-shellscript': 'sh',
-    'application/x-sh': 'sh',
-    'application/sql': 'sql',
-    'text/x-java-source': 'java',
-    'text/x-java': 'java',
-    'application/java': 'java',
-    'text/csv': 'csv',
-    'application/csv': 'csv',
-    'text/yaml': 'yml',
-    'application/x-yaml': 'yml',
-    'text/x-yaml': 'yml',
-    'application/xml+xslt': 'xsl',
-    'text/x-less': 'less',
-    'text/x-scss': 'scss',
-    'text/x-typescript': 'ts',
-    'application/typescript': 'ts',
-    'application/tsx': 'tsx',
-    'application/jsx': 'jsx',
-    'text/php': 'php',
-    'application/php': 'php',
-    'text/x-c': 'c',
-    'text/x-c++': 'cpp',
-    'text/x-csharp': 'cs',
-    'text/x-go': 'go',
-    'text/x-ruby': 'rb',
-    'text/x-rust': 'rs',
-    'application/pdf': 'pdf',
-    'application/zip': 'zip',
-    'application/x-tar': 'tar',
-    'application/x-gzip': 'gz',
-    'application/gzip': 'gz',
-    'image/jpeg': 'jpg',
-    'image/png': 'png',
-    'image/gif': 'gif',
-    'image/svg+xml': 'svg'
-  }
-
-  // Check for exact match first
-  if (extensionMap[contentType]) {
-    return extensionMap[contentType]
-  }
-
-  // Check for partial matches
-  for (const [type, ext] of Object.entries(extensionMap)) {
-    if (contentType.includes(type)) {
-      return ext
-    }
+  // Use centralized type definitions
+  const typeDef = getFileTypeDefinition(contentType)
+  if (typeDef && typeDef.extensions && typeDef.extensions.length > 0) {
+    return typeDef.extensions[0]
   }
 
   // Default fallback patterns

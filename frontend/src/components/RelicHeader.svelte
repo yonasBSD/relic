@@ -13,6 +13,7 @@
     downloadArchiveFile,
     copyArchiveFileContent,
     viewArchiveFileRaw,
+    copyToClipboard,
   } from "../services/relicActions";
   import ReportModal from "./ReportModal.svelte";
   import { createEventDispatcher } from "svelte";
@@ -33,7 +34,7 @@
   let showReportModal = false;
 
   function copyRelicId() {
-    navigator.clipboard.writeText(relicId);
+    copyToClipboard(relicId, 'Relic ID copied to clipboard!');
   }
 
   function handleShare() {
