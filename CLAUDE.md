@@ -119,6 +119,12 @@ DELETE /api/v1/admin/clients/:id       Delete a client
 - Delete clients (and optionally their relics)
 - View system statistics
 
+**Setting Up Admin Users:**
+1. Get client ID from browser: `localStorage.getItem('relic_client_key')`
+2. Add to `ADMIN_CLIENT_IDS` in `docker-compose.prod.yml` (comma-separated for multiple admins)
+3. Restart services with `make down && make up`
+4. Admin panel will appear in navigation
+
 ### Request/Response Pattern
 
 - **Create**: Returns `{id, url, fork_of?, created_at}`
@@ -181,15 +187,36 @@ relic/
 ├── sync/                    # S3 Sync service
 │   └── Dockerfile
 ├── requirements.txt         # Python dependencies
-├── Makefile                 # Development commands
-├── docker-compose.yml       # Docker services (Nginx, Backend, Frontend, DB, MinIO)
-├── nginx.conf               # Nginx configuration
+├── Makefile                 # Build and deployment commands
+├── docker-compose.dev.yml   # Development: hot-reload, volume mounts
+├── docker-compose.prod.yml  # Production: optimized builds, restart policies
+├── nginx.conf               # Nginx configuration (dev only)
 ├── .env                     # Environment variables
 ├── .gitignore
 ├── RELIC.md                 # Feature specification
 ├── CLAUDE.md                # This file
 └── README.md                # User documentation
 ```
+
+## Docker Compose Setup
+
+The project uses two separate Docker Compose configurations:
+
+### Production (`docker-compose.prod.yml`) - Default
+- **Purpose**: Production/release deployments
+- **Frontend**: Built static files served via Nginx (`frontend/Dockerfile.prod`)
+- **Backend**: Production build (`backend/Dockerfile.prod`)
+- **Features**: Optimized builds, restart policies, no volume mounts
+- **Commands**: `make up`, `make down`, `make logs`, `make build`
+
+### Development (`docker-compose.dev.yml`)
+- **Purpose**: Local development with hot-reload
+- **Frontend**: Vite dev server with volume mounts for live updates
+- **Backend**: Uvicorn with `--reload` flag and volume mounts
+- **Features**: Hot-reload, code volumes, separate Nginx container
+- **Commands**: `make dev-up`, `make dev-down`, `make dev-logs`, `make dev-build`
+
+**Important**: By default, `make up` starts **production** services. Use `make dev-up` for development.
 
 ## Common Development Tasks
 

@@ -78,39 +78,119 @@ relic --name "My Script" --private --expires 24h script.py
 
 ### Prerequisites
 - Docker and Docker Compose
-- Make (optional)
+- Make (optional, but recommended)
 
-### Setup
+### Production Deployment (Recommended)
 
-1. **Start all services**
+For production/release deployments, use the default configuration:
+
+1. **Start production services**
 ```bash
 make up
 ```
 
-2. **Access the application**
-- Frontend: http://localhost
-- API Docs: http://localhost/api/docs
-- MinIO Console: http://localhost:9001 (admin/admin)
+Or without Make:
+```bash
+docker compose -f docker-compose.prod.yml up -d --build
+```
 
-3. **Stop services**
+2. **Access the application**
+- Application: http://localhost
+- MinIO Console: http://localhost:9001 (minioadmin/minioadmin)
+
+3. **View logs**
+```bash
+make logs
+```
+
+4. **Stop services**
 ```bash
 make down
 ```
 
-## Production Deployment
+### Development Setup
 
-For production environments, use the `docker-compose.prod.yml` configuration which includes optimizations, Nginx configuration, and restart policies.
+For local development with hot-reload:
 
-1. **Configure Environment**
-   Review `docker-compose.prod.yml` and update environment variables if needed (especially passwords and secret keys).
+1. **Start development services**
+```bash
+make dev-up
+```
 
-2. **Start Services**
-   ```bash
-   docker compose -f docker-compose.prod.yml up -d --build
+Or without Make:
+```bash
+docker compose -f docker-compose.dev.yml up -d
+```
+
+2. **Access the application**
+- Frontend: http://localhost (with hot-reload)
+- Backend: http://localhost/api (with auto-reload)
+- API Docs: http://localhost/api/docs
+- MinIO Console: http://localhost:9001 (minioadmin/minioadmin)
+
+3. **View logs**
+```bash
+make dev-logs
+```
+
+4. **Stop services**
+```bash
+make dev-down
+```
+
+**Note:** Development mode mounts your local code directories as volumes, enabling hot-reload for both frontend and backend. Changes to code will be reflected immediately without rebuilding.
+
+## Admin Setup
+
+Relic supports admin users with elevated privileges (view all relics, delete any relic, manage clients, view statistics).
+
+### Setting Up an Admin User
+
+1. **Get your Client ID**
+
+   Open your browser's Developer Tools (F12) and run this in the Console:
+   ```javascript
+   localStorage.getItem('relic_client_key')
    ```
 
-3. **Verify Deployment**
-   The application will be available on port 80.
+   This will output your client ID, which looks like: `5cdb7b79c38385db9f5b5f6ad884c8ef`
+
+2. **Configure Admin in Production**
+
+   Edit `docker-compose.prod.yml` and set the `ADMIN_CLIENT_IDS` environment variable:
+   ```yaml
+   backend:
+     environment:
+       ADMIN_CLIENT_IDS: "5cdb7b79c38385db9f5b5f6ad884c8ef"
+   ```
+
+   For multiple admins, use comma-separated values:
+   ```yaml
+   ADMIN_CLIENT_IDS: "5cdb7b79c38385db9f5b5f6ad884c8ef,a1b2c3d4e5f6789012345678abcdef01"
+   ```
+
+3. **Restart Services**
+   ```bash
+   make down
+   make up
+   ```
+
+4. **Access Admin Panel**
+
+   After restarting, the "Admin" tab will appear in the navigation. Admin privileges include:
+   - View all relics (including private ones)
+   - Delete any relic (not just your own)
+   - View all registered clients
+   - Delete clients and their relics
+   - View system statistics
+
+### Development Environment
+
+For development mode, edit `docker-compose.dev.yml` instead and use:
+```bash
+make dev-down
+make dev-up
+```
 
 ## Relic Indexes
 
