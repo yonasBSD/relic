@@ -1,4 +1,5 @@
 import api from './core'
+import { triggerDownload } from '../utils/download'
 
 export async function checkAdminStatus() {
     return api.get('/admin/check')
@@ -42,15 +43,8 @@ export async function downloadAdminBackup(filename) {
         responseType: 'blob'
     })
 
-    // Create download link
-    const url = window.URL.createObjectURL(new Blob([response.data]))
-    const link = document.createElement('a')
-    link.href = url
-    link.setAttribute('download', filename)
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    window.URL.revokeObjectURL(url)
+    // Trigger browser download using shared utility
+    triggerDownload(response.data, filename)
 }
 
 // Report endpoints
