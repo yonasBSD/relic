@@ -252,7 +252,7 @@
   />
 </svelte:head>
 
-<div class="min-h-screen flex flex-col font-ubuntu bg-[#F7F7F7] text-[#333333]">
+<div class="min-h-screen flex flex-col font-ubuntu text-[#333333]">
   <!-- Header with Navigation -->
   <header class="bg-[#772953] text-white shadow-lg">
     <div class="max-w-7xl mx-auto px-6">
@@ -447,7 +447,6 @@
     margin: 0;
     padding: 0;
     font-family: "Ubuntu", sans-serif;
-    background-color: #f7f7f7;
     color: #333333;
   }
 
