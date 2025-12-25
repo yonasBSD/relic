@@ -9,6 +9,7 @@
     updateUrlWithLineNumbers,
     createLineTooltip,
   } from '../utils/lineNumbers';
+  import { getMonacoLanguage } from '../services/typeUtils';
   import CommentEditor from './CommentEditor.svelte';
   import { processMarkdown } from '../services/processors/markdownProcessor';
   import { getClientKey } from '../services/api';
@@ -92,7 +93,7 @@
 
       editor = monaco.editor.create(container, {
         value: value || '',
-        language: language || 'plaintext',
+        language: getMonacoLanguage(language),
         readOnly,
         theme: 'relic-theme',
         automaticLayout: true,
@@ -1029,7 +1030,8 @@
 
   $: if (editor && language) {
     try {
-      monaco.editor.setModelLanguage(editor.getModel(), language)
+      const monacoLang = getMonacoLanguage(language);
+      monaco.editor.setModelLanguage(editor.getModel(), monacoLang)
     } catch (e) {
       console.error('Failed to set language:', e)
     }
@@ -1064,8 +1066,9 @@
         // Disable by changing language to plaintext (no syntax highlighting)
         monaco.editor.setModelLanguage(model, 'plaintext')
       } else {
-        // Re-enable with original language
-        monaco.editor.setModelLanguage(model, language)
+        // Re-enable with original language (mapped for Monaco)
+        const monacoLang = getMonacoLanguage(language);
+        monaco.editor.setModelLanguage(model, monacoLang)
       }
     }
   }

@@ -152,3 +152,86 @@ export function isBinaryType(contentType) {
   const type = getFileTypeDefinition(contentType)
   return ['image', 'pdf', 'archive', 'unknown'].includes(type.category)
 }
+
+/**
+ * Map our syntax identifiers to Monaco Editor language identifiers
+ * @param {string} syntax - Our internal syntax identifier
+ * @returns {string} Monaco language identifier
+ */
+export function getMonacoLanguage(syntax) {
+  if (!syntax || syntax === 'auto') return 'plaintext'
+
+  const mapping = {
+    // Shell & Scripts
+    'bash': 'shell',
+    'sh': 'shell',
+    'zsh': 'shell',
+    'awk': 'plaintext',
+    'sed': 'plaintext',
+
+    // Web & Frameworks
+    'jsx': 'javascript',
+    'tsx': 'typescript',
+    'vue': 'html',
+    'svelte': 'html',
+    'rails': 'ruby',
+    'sass': 'scss',
+
+    // Data & Config
+    'relic-index': 'json',
+    'jsonc': 'json',
+    'json5': 'json',
+    'yml': 'yaml',
+    'properties': 'ini',
+    'env': 'ini',
+    'svg': 'xml',
+
+    // Query & Database
+    'postgresql': 'pgsql',
+    'plsql': 'sql',
+
+    // Infrastructure & DevOps
+    'terraform': 'hcl',
+    'nginx': 'ini', // Fallback for config style
+    'apache': 'ini', // Fallback for config style
+    'gradle': 'groovy',
+
+    // Templates
+    'mustache': 'handlebars',
+    'jinja': 'html',
+    'jinja2': 'html',
+    'liquid': 'html',
+    'ejs': 'html',
+
+    // Documentation & Markup
+    'md': 'markdown',
+    'rst': 'restructuredtext',
+    'bibtex': 'latex',
+    'asciidoc': 'markdown', // Fallback
+    'org': 'markdown', // Fallback
+
+    // Science & Low-level
+    'fortran': 'plaintext',
+    'asm': 'plaintext',
+    'llvm': 'plaintext',
+    'wasm': 'plaintext',
+
+    // Game Dev
+    'gdscript': 'python', // Closest match
+    'hlsl': 'cpp',
+    'glsl': 'cpp',
+    'wgsl': 'rust', // Closest match for syntax
+
+    // Hardware
+    'verilog': 'systemverilog',
+    'vhdl': 'plaintext',
+
+    // Specialized & Legacy
+    'delphi': 'pascal',
+    'cobol': 'plaintext',
+    'basic': 'vb',
+    'diff': 'diff'
+  }
+
+  return mapping[syntax] || syntax
+}
