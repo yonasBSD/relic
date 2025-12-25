@@ -425,6 +425,25 @@
     }
   }
 
+  function handleRelicUpdate(event) {
+    const updatedRelic = event.detail;
+    if (updatedRelic) {
+      const oldContentType = relic.content_type;
+      const oldLanguageHint = relic.language_hint;
+
+      relic = { ...relic, ...updatedRelic };
+
+      // If content_type or language_hint changed, re-process to update syntax highlighting
+      const contentTypeChanged = updatedRelic.content_type && updatedRelic.content_type !== oldContentType;
+      const languageHintChanged = updatedRelic.language_hint !== oldLanguageHint;
+
+      if (processed && (contentTypeChanged || languageHintChanged)) {
+          // Trigger reload to re-process content with new type hint
+          loadRelic(relicId);
+      }
+    }
+  }
+
   $: if (relicId) {
     if (filePath) {
       loadArchiveFile(relicId, filePath);
@@ -502,6 +521,7 @@
         on:toggle-bookmark={toggleBookmark}
         on:fork={handleFork}
         on:delete={handleDelete}
+        on:update={handleRelicUpdate}
       />
 
       <RelicStatusBar
