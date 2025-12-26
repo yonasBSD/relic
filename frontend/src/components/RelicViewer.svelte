@@ -7,6 +7,7 @@
     removeBookmark,
     checkBookmark,
     deleteRelic,
+    updateRelic,
     checkAdminStatus,
     getComments,
     createComment,
@@ -444,6 +445,25 @@
     }
   }
 
+  async function handleRemoveTag(event) {
+    const tagToRemove = event.detail;
+    if (!relic || !relic.tags) return;
+    
+    // Filter out the tag to remove
+    const newTags = relic.tags
+      .filter(t => (typeof t === 'string' ? t : t.name) !== tagToRemove)
+      .map(t => (typeof t === 'string' ? t : t.name));
+      
+    try {
+      const response = await updateRelic(relicId, { tags: newTags });
+      relic = { ...relic, tags: response.data.tags };
+      showToast(`Tag "${tagToRemove}" removed`, "success");
+    } catch (error) {
+      console.error("Error removing tag:", error);
+      showToast("Failed to remove tag", "error");
+    }
+  }
+
   $: if (relicId) {
     if (filePath) {
       loadArchiveFile(relicId, filePath);
@@ -544,6 +564,8 @@
         on:pdf-zoom-in={() => pdfViewerRef?.zoomInMethod()}
         on:pdf-zoom-out={() => pdfViewerRef?.zoomOutMethod()}
         on:pdf-reset-zoom={() => pdfViewerRef?.resetZoomMethod()}
+        on:tag-click
+        on:remove-tag={handleRemoveTag}
       />
 
       <!-- Optional Description -->

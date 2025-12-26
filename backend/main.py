@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy import Column, String, Integer, DateTime, LargeBinary, ForeignKey, Boolean, JSON, Text, Table, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Session, relationship
+from sqlalchemy.orm import Session, relationship, selectinload
 from datetime import datetime
 import uuid
 from typing import Optional, List
@@ -126,7 +126,11 @@ async def register_client(request: Request, db: Session = Depends(get_db)):
 
 
 @app.get("/api/v1/client/relics", response_model=dict)
-async def get_client_relics(request: Request, db: Session = Depends(get_db)):
+async def get_client_relics(
+    request: Request,
+    tag: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
     """
     Get all relics owned by this client.
 
@@ -136,9 +140,22 @@ async def get_client_relics(request: Request, db: Session = Depends(get_db)):
     if not client:
         raise HTTPException(status_code=401, detail="Valid client key required")
 
-    relics = db.query(Relic).filter(
+    query = db.query(Relic).options(selectinload(Relic.tags)).filter(
         Relic.client_id == client.id
-    ).order_by(Relic.created_at.desc()).all()
+    )
+
+    if tag:
+        tag_obj = db.query(Tag).filter(Tag.name == tag.strip().lower()).first()
+        if tag_obj:
+            query = query.filter(Relic.tags.contains(tag_obj))
+        else:
+            return {
+                "client_id": client.id,
+                "relic_count": 0,
+                "relics": []
+            }
+
+    relics = query.order_by(Relic.created_at.desc()).all()
 
     return {
         "client_id": client.id,
@@ -150,7 +167,8 @@ async def get_client_relics(request: Request, db: Session = Depends(get_db)):
                 "content_type": relic.content_type,
                 "size_bytes": relic.size_bytes,
                 "created_at": relic.created_at,
-                "access_level": relic.access_level
+                "access_level": relic.access_level,
+                "tags": [{"id": t.id, "name": t.name} for t in relic.tags]
             }
             for relic in relics
         ]
@@ -261,6 +279,33 @@ def check_ownership_or_admin(
 
 # ==================== Helper Functions ====================
 
+def process_tags(db: Session, tag_names: List[str]) -> List[Tag]:
+    """Process a list of tag names and return Tag objects (creating new ones if needed)."""
+    if not tag_names:
+        return []
+
+    # Normalize tags
+    normalized_names = sorted(list(set(name.strip().lower() for name in tag_names if name.strip())))
+
+    if not normalized_names:
+        return []
+
+    # Find existing tags
+    existing_tags = db.query(Tag).filter(Tag.name.in_(normalized_names)).all()
+    existing_names = {tag.name for tag in existing_tags}
+
+    result_tags = list(existing_tags)
+
+    # Create new tags
+    for name in normalized_names:
+        if name not in existing_names:
+            new_tag = Tag(name=name)
+            db.add(new_tag)
+            result_tags.append(new_tag)
+
+    return result_tags
+
+
 def generate_unique_relic_id(db: Session, max_retries: int = 5) -> str:
     """
     Generate a unique relic ID with collision handling.
@@ -312,6 +357,10 @@ async def create_relic(
 
     Accepts either file upload or raw content in body.
     """
+    # Normalize tags input - handle if it comes as comma-separated string in a single list element
+    if tags and len(tags) == 1 and ',' in tags[0]:
+        tags = [t.strip() for t in tags[0].split(',')]
+
     # Validate access_level
     if access_level not in ("public", "private"):
         raise HTTPException(
@@ -347,6 +396,9 @@ async def create_relic(
         # Parse expiry
         expires_at = parse_expiry_string(expires_in)
 
+        # Process tags
+        tag_objects = process_tags(db, tags) if tags else []
+
         # Create relic record
         relic = Relic(
             id=relic_id,
@@ -360,6 +412,10 @@ async def create_relic(
             created_at=datetime.utcnow(),
             expires_at=expires_at
         )
+
+        # Associate tags
+        if tag_objects:
+            relic.tags = tag_objects
 
         # Update client relic count
         if client:
@@ -391,7 +447,7 @@ async def get_relic(
     db: Session = Depends(get_db)
 ):
     """Get relic metadata."""
-    relic = db.query(Relic).filter(Relic.id == relic_id).first()
+    relic = db.query(Relic).options(selectinload(Relic.tags)).filter(Relic.id == relic_id).first()
 
     if not relic:
         raise HTTPException(status_code=404, detail="Relic not found")
@@ -452,6 +508,7 @@ async def fork_relic(
     name: Optional[str] = Form(None),
     access_level: Optional[str] = Form(None),
     expires_in: Optional[str] = Form(None),
+    tags: Optional[List[str]] = Form(None),
     db: Session = Depends(get_db)
 ):
     """
@@ -460,6 +517,10 @@ async def fork_relic(
     Creates a new relic with fork_of pointing to the original.
     Public endpoint - anyone can fork. Fork belongs to forking client if key provided.
     """
+    # Normalize tags input
+    if tags and len(tags) == 1 and ',' in tags[0]:
+        tags = [t.strip() for t in tags[0].split(',')]
+
     # Validate access_level
     if access_level and access_level not in ['public', 'private']:
         raise HTTPException(status_code=400, detail="Invalid access_level. Must be 'public' or 'private'")
@@ -468,9 +529,6 @@ async def fork_relic(
     client = get_or_create_client_key(request, db)
 
     original = db.query(Relic).filter(Relic.id == relic_id).first()
-
-    if not original:
-        raise HTTPException(status_code=404, detail="Relic not found")
 
     if not original:
         raise HTTPException(status_code=404, detail="Relic not found")
@@ -496,6 +554,12 @@ async def fork_relic(
         if expires_in and expires_in != 'never':
             expires_at = parse_expiry_string(expires_in)
 
+        # Process tags: use provided tags or copy from original
+        if tags is not None:
+            tag_objects = process_tags(db, tags)
+        else:
+            tag_objects = list(original.tags)
+
         # Create fork
         fork = Relic(
             id=new_id,
@@ -509,6 +573,10 @@ async def fork_relic(
             access_level=access_level or original.access_level,
             expires_at=expires_at
         )
+
+        # Associate tags
+        if tag_objects:
+            fork.tags = tag_objects
 
         # Update client relic count if client exists
         if client:
@@ -567,6 +635,9 @@ async def update_relic(
 
     if update.expires_in is not None:
         relic.expires_at = parse_expiry_string(update.expires_in)
+
+    if update.tags is not None:
+        relic.tags = process_tags(db, update.tags)
 
     db.commit()
     db.refresh(relic)
@@ -637,12 +708,21 @@ async def update_client_name(
 @app.get("/api/v1/relics", response_model=RelicListResponse)
 async def list_relics(
     limit: int = 1000,
+    tag: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     """List the 1000 most recent public relics."""
-    relics = db.query(Relic).filter(
-        Relic.access_level == "public"
-    ).order_by(Relic.created_at.desc()).limit(limit).all()
+    query = db.query(Relic).options(selectinload(Relic.tags)).filter(Relic.access_level == "public")
+
+    if tag:
+        tag_obj = db.query(Tag).filter(Tag.name == tag.strip().lower()).first()
+        if tag_obj:
+            query = query.filter(Relic.tags.contains(tag_obj))
+        else:
+            # If tag doesn't exist, return empty list
+            return {"relics": []}
+
+    relics = query.order_by(Relic.created_at.desc()).limit(limit).all()
 
     return {
         "relics": relics
@@ -776,10 +856,10 @@ async def get_client_bookmarks(
     if not client:
         raise HTTPException(status_code=401, detail="Valid client key required")
 
-    # Join bookmarks with relics, exclude deleted relics
+    # Join bookmarks with relics, exclude deleted relics, and eagerly load tags
     bookmarks = db.query(ClientBookmark, Relic).join(
         Relic, ClientBookmark.relic_id == Relic.id
-    ).filter(
+    ).options(selectinload(Relic.tags)).filter(
         ClientBookmark.client_id == client.id
     ).order_by(ClientBookmark.created_at.desc()).all()
 
@@ -795,7 +875,8 @@ async def get_client_bookmarks(
                 "created_at": relic.created_at,
                 "access_level": relic.access_level,
                 "bookmark_id": bookmark.id,
-                "bookmarked_at": bookmark.created_at
+                "bookmarked_at": bookmark.created_at,
+                "tags": [{"id": t.id, "name": t.name} for t in relic.tags]
             }
             for bookmark, relic in bookmarks
         ]
@@ -970,7 +1051,7 @@ async def admin_list_all_relics(
     """
     get_admin_client(request, db)  # Verify admin
 
-    query = db.query(Relic)
+    query = db.query(Relic).options(selectinload(Relic.tags))
 
     if access_level:
         query = query.filter(Relic.access_level == access_level)
@@ -995,7 +1076,8 @@ async def admin_list_all_relics(
                 "size_bytes": r.size_bytes,
                 "access_level": r.access_level,
                 "created_at": r.created_at,
-                "expires_at": r.expires_at
+                "expires_at": r.expires_at,
+                "tags": [{"id": t.id, "name": t.name} for t in r.tags]
             }
             for r in relics
         ]
