@@ -10,6 +10,7 @@
   export let showSource = false
   export let pdfState = null
   export let fontSize = 13
+  export let darkAnsi = true
 
   const dispatch = createEventDispatcher()
 </script>
@@ -140,6 +141,16 @@
             <option value="custom">Custom...</option>
           </select>
         </div>
+
+        {#if processed.hasAnsiCodes}
+          <button
+            on:click={() => dispatch('toggle-dark-ansi')}
+            class="px-2 py-1 rounded text-xs transition-colors {darkAnsi ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}"
+            title={darkAnsi ? 'Switch to light background' : 'Switch to dark background'}
+          >
+            <i class="fas {darkAnsi ? 'fa-moon' : 'fa-sun'}"></i>
+          </button>
+        {/if}
       </div>
     {/if}
 

@@ -27,6 +27,7 @@
   export let comments = []
   export let isAdmin = false
   export let ansiDecorations = [] // ANSI color decorations
+  export let darkAnsi = true
 
   let container
   let editor
@@ -53,6 +54,8 @@
   let hoveredGlyphLine = null
   let currentClientId = null
 
+  $: isDarkMode = (darkAnsi && ansiDecorations.length > 0)
+
   const dispatch = createEventDispatcher()
 
   onMount(async () => {
@@ -78,16 +81,34 @@
         base: 'vs',
         inherit: true,
         rules: [
-          { token: '', foreground: '374151' } // gray-700 (matches oklch(0.278...) better than gray-800)
+          { token: '', foreground: '374151' } // gray-700
         ],
         colors: {
           'editor.lineHighlightBackground': '#f3f4f6', // gray-100
-          'editorLineNumber.foreground': '#9ca3af', // gray-400 (lighter to match mock)
+          'editorLineNumber.foreground': '#9ca3af', // gray-400
           'editorLineNumber.activeForeground': '#374151', // gray-700
           'scrollbarSlider.background': '#cccccc',
           'scrollbarSlider.hoverBackground': '#b3b3b3',
           'scrollbarSlider.activeBackground': '#999999',
-          'editor.selectionBackground': '#e5e7eb' // Lighter selection
+          'editor.selectionBackground': '#e5e7eb'
+        }
+      })
+
+      monaco.editor.defineTheme('relic-theme-dark', {
+        base: 'vs-dark',
+        inherit: true,
+        rules: [
+          { token: '', foreground: 'd4d4d4' }
+        ],
+        colors: {
+          'editor.background': '#1e1e1e',
+          'editor.lineHighlightBackground': '#2f3337',
+          'editorLineNumber.foreground': '#858585',
+          'editorLineNumber.activeForeground': '#c6c6c6',
+          'scrollbarSlider.background': '#4e4e4e',
+          'scrollbarSlider.hoverBackground': '#5a5a5a',
+          'scrollbarSlider.activeBackground': '#6e6e6e',
+          'editor.selectionBackground': '#264f78'
         }
       })
 
@@ -95,7 +116,7 @@
         value: value || '',
         language: getMonacoLanguage(language),
         readOnly,
-        theme: 'relic-theme',
+        theme: (darkAnsi && ansiDecorations.length > 0) ? 'relic-theme-dark' : 'relic-theme',
         automaticLayout: true,
         minimap: { enabled: false },
         folding: false,
@@ -159,6 +180,15 @@
   // Apply ANSI decorations when they change
   $: if (editor && ansiDecorations) {
     applyAnsiDecorations()
+    // Re-evaluate theme if ansiDecorations or darkAnsi change
+    const theme = (darkAnsi && ansiDecorations.length > 0) ? 'relic-theme-dark' : 'relic-theme'
+    monaco.editor.setTheme(theme)
+  }
+
+  $: if (editor && (darkAnsi !== undefined)) {
+    const theme = (darkAnsi && ansiDecorations.length > 0) ? 'relic-theme-dark' : 'relic-theme'
+    monaco.editor.setTheme(theme)
+    injectAnsiStyles() // Colors might need adjustment if theme changes
   }
 
   $: if (editor && comments) {
@@ -257,7 +287,24 @@
           const temp = fgColor || '#CCCCCC'
           fgColor = bgColor || 'transparent'
           bgColor = temp
-          if (fgColor === 'transparent') fgColor = '#1E1E1E'
+          if (fgColor === 'transparent') fgColor = darkAnsi ? '#1E1E1E' : '#FFFFFF'
+        }
+
+        // Adjust colors for light background if needed
+        if (!darkAnsi) {
+            const lightColorMap = {
+                '#E5E510': '#A6A600', // Yellow
+                '#E5E5E5': '#444444', // White
+                '#F5F543': '#888800', // Bright Yellow
+                '#FFFFFF': '#000000', // Bright White
+                '#11A8CD': '#007ACC', // Cyan -> Darker Cyan
+                '#29B8DB': '#007ACC', // Bright Cyan -> Darker Cyan
+            }
+            if (fgColor && lightColorMap[fgColor.toUpperCase()]) {
+                fgColor = lightColorMap[fgColor.toUpperCase()]
+            }
+            // Backgrounds should probably remain as is or be slightly lightened, 
+            // but usually dark backgrounds stay dark.
         }
 
         // Apply colors
@@ -1097,10 +1144,10 @@
 </script>
 
 {#if noWrapper}
-  <div bind:this={container} style="height: {height};" class="w-full monaco-editor-clickable-lines" />
+  <div bind:this={container} style="height: {height};" class="w-full monaco-editor-clickable-lines {isDarkMode ? 'relic-dark-mode' : ''}" />
 {:else}
-  <div class="bg-white shadow-sm rounded-lg border border-gray-200 mb-6 overflow-hidden">
-    <div bind:this={container} style="height: {height};" class="w-full monaco-editor-clickable-lines" />
+  <div class="shadow-sm rounded-lg border mb-6 overflow-hidden {isDarkMode ? 'bg-[#1e1e1e] border-[#333333] relic-dark-mode' : 'bg-white border-gray-200'}">
+    <div bind:this={container} style="height: {height};" class="w-full monaco-editor-clickable-lines {isDarkMode ? 'relic-dark-mode' : ''}" />
   </div>
 {/if}
 
@@ -1111,15 +1158,28 @@
     border-left: 3px solid #e95420 !important;
   }
 
+  :global(.relic-dark-mode .line-number-highlight) {
+    background-color: #37373d !important; /* VS Code dark selection highlight */
+    border-left: 3px solid #e95420 !important;
+  }
+
   :global(.monaco-editor .line-number-highlight .line-number) {
     color: #c2410c !important;
     font-weight: 600 !important;
+  }
+
+  :global(.relic-dark-mode .monaco-editor .line-number-highlight .line-number) {
+    color: #ff9d00 !important; /* Brighter for dark mode visibility */
   }
 
   /* Hover effect for line numbers */
   :global(.monaco-editor .margin-view-overlays .line-numbers:hover) {
     background-color: #f3f4f6 !important;
     cursor: pointer !important;
+  }
+
+  :global(.relic-dark-mode .monaco-editor .margin-view-overlays .line-numbers:hover) {
+    background-color: #2a2d2e !important;
   }
 
   /* Clickable line numbers styling */
@@ -1130,6 +1190,10 @@
 
   :global(.monaco-editor-clickable-lines .monaco-editor .line-numbers:hover) {
     background-color: #e5e7eb !important;
+  }
+
+  :global(.relic-dark-mode .monaco-editor-clickable-lines .monaco-editor .line-numbers:hover) {
+    background-color: #333333 !important;
   }
 
   /* Glyph margin for line highlights */
@@ -1282,10 +1346,18 @@
     font-size: inherit;
   }
 
+  :global(.relic-dark-mode .comment-author) {
+    color: #9ca3af;
+  }
+
   :global(.comment-time) {
     font-size: 11px;
     color: #9ca3af;
     margin-left: 8px;
+  }
+
+  :global(.relic-dark-mode .comment-time) {
+    color: #6b7280;
   }
 
   :global(.comment-tools) {
@@ -1318,6 +1390,12 @@
     border-color: #e5e7eb;
   }
 
+  :global(.relic-dark-mode .comment-tool-btn:hover) {
+    background: #3c3c3c;
+    color: #cccccc;
+    border-color: #454545;
+  }
+
   :global(.comment-delete) {
     color: #ef4444;
     cursor: pointer;
@@ -1340,6 +1418,10 @@
     font-size: inherit;
     color: #6b7280;
     line-height: 1.5;
+  }
+
+  :global(.relic-dark-mode .comment-content) {
+    color: #d4d4d4;
   }
 
   :global(.comment-editor-wrapper) {

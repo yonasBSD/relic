@@ -14,6 +14,7 @@
   export let showSyntaxHighlighting = true
   export let showLineNumbers = true
   export let fontSize = 13
+  export let darkAnsi = true
 
   let selectedFile = null
   let previewedFile = null
@@ -341,6 +342,15 @@
               </div>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
+              {#if previewedFile?.processed?.hasAnsiCodes}
+                <button
+                  on:click={() => darkAnsi = !darkAnsi}
+                  class="p-2 transition-colors rounded {darkAnsi ? 'bg-purple-100 text-[#772953]' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200'}"
+                  title={darkAnsi ? 'Switch to light background' : 'Switch to dark background'}
+                >
+                  <i class="fas {darkAnsi ? 'fa-moon' : 'fa-sun'} text-sm"></i>
+                </button>
+              {/if}
               <button
                 class="p-2 text-[#772953] hover:text-[#5a1f3f] rounded transition-colors"
                 on:click={() => openInFullView(selectedFile)}
@@ -367,6 +377,7 @@
                 {showSyntaxHighlighting}
                 {showLineNumbers}
                 {fontSize}
+                {darkAnsi}
               />
             {:else if previewedFile.processed.type === 'markdown'}
               <MarkdownRenderer
@@ -374,6 +385,7 @@
                 {relicId}
                 {showSyntaxHighlighting}
                 {showLineNumbers}
+                {darkAnsi}
               />
             {:else if previewedFile.processed.type === 'html'}
               <HtmlRenderer
@@ -381,6 +393,7 @@
                 {relicId}
                 {showSyntaxHighlighting}
                 {showLineNumbers}
+                {darkAnsi}
               />
             {:else if previewedFile.processed.type === 'csv'}
               <CsvRenderer processed={previewedFile.processed} />

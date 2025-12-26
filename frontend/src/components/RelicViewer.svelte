@@ -115,6 +115,14 @@
     return 13;
   })();
 
+  let darkAnsi = (() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("relic_editor_dark_ansi");
+      return saved === "false" ? false : true; // Default to true for ANSI
+    }
+    return true;
+  })();
+
   // Dispatch initial state to parent on mount
   onMount(async () => {
     dispatch("fullwidth-toggle", { isFullWidth });
@@ -161,6 +169,10 @@
 
   $: if (typeof window !== "undefined") {
     localStorage.setItem("relic_editor_font_size", fontSize.toString());
+  }
+
+  $: if (typeof window !== "undefined") {
+    localStorage.setItem("relic_editor_dark_ansi", darkAnsi.toString());
   }
 
   async function loadComments(id) {
@@ -561,6 +573,8 @@
         on:toggle-comments={() => (showComments = !showComments)}
         on:toggle-source={(e) => (showSource = e.detail)}
         on:update-font-size={(e) => (fontSize = e.detail)}
+        on:toggle-dark-ansi={() => (darkAnsi = !darkAnsi)}
+        {darkAnsi}
         on:pdf-zoom-in={() => pdfViewerRef?.zoomInMethod()}
         on:pdf-zoom-out={() => pdfViewerRef?.zoomOutMethod()}
         on:pdf-reset-zoom={() => pdfViewerRef?.resetZoomMethod()}
@@ -615,6 +629,7 @@
             {fontSize}
             {comments}
             {isAdmin}
+            {darkAnsi}
             on:line-clicked={handleLineClicked}
             on:line-range-selected={handleLineRangeSelected}
             on:multi-line-selected={handleMultiLineSelected}
@@ -634,6 +649,7 @@
             {fontSize}
             {comments}
             {isAdmin}
+            {darkAnsi}
             on:line-clicked={handleLineClicked}
             on:line-range-selected={handleLineRangeSelected}
             on:multi-line-selected={handleMultiLineSelected}
@@ -653,6 +669,7 @@
             {fontSize}
             {comments}
             {isAdmin}
+            {darkAnsi}
             on:line-clicked={handleLineClicked}
             on:line-range-selected={handleLineRangeSelected}
             on:multi-line-selected={handleMultiLineSelected}

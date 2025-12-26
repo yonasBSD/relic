@@ -1,6 +1,7 @@
 import hljs from 'highlight.js'
 import { detectLanguageHint } from '../typeUtils.js'
 import { decodeContent, getTextMetadata } from './utils/contentUtils'
+import { parseAnsiCodes, containsAnsiCodes } from './utils/ansiUtils'
 
 /**
  * Detect programming language from content
@@ -46,10 +47,28 @@ export function processCode(content, contentType, languageHint) {
     const language = detectLanguage(text, contentType, languageHint)
     const metadata = getTextMetadata(text)
 
+    // Check for ANSI codes even in code files
+    if (containsAnsiCodes(text)) {
+        const { text: cleanText, decorations } = parseAnsiCodes(text)
+        return {
+            type: 'code',
+            preview: cleanText,
+            highlighted: highlightCode(cleanText, language),
+            ansiDecorations: decorations,
+            hasAnsiCodes: true,
+            metadata: {
+                ...metadata,
+                language,
+                hasAnsiCodes: true
+            }
+        }
+    }
+
     return {
         type: 'code',
         preview: text,
         highlighted: highlightCode(text, language),
+        hasAnsiCodes: false,
         metadata: {
             ...metadata,
             language
