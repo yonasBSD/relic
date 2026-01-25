@@ -21,7 +21,8 @@ from backend.schemas import (
 )
 from backend.storage import storage_service
 from backend.utils import generate_relic_id, parse_expiry_string, is_expired, hash_password, generate_client_id
-from backend.backup import start_backup_scheduler, shutdown_backup_scheduler, perform_backup
+from backend.backup import perform_backup
+from backend.scheduler import start_scheduler, shutdown_scheduler
 
 
 app = FastAPI(
@@ -50,16 +51,15 @@ async def startup_event():
     storage_service.ensure_bucket()
 
 
-    # Start backup scheduler
-    if settings.BACKUP_ENABLED:
-        await start_backup_scheduler()
-
-        # Create backup on startup
-        if settings.BACKUP_ON_STARTUP:
-            import logging
-            logger = logging.getLogger('relic.main')
-            logger.info("Creating startup backup...")
-            await perform_backup(backup_type='startup')
+    # Start background scheduler (handles backups and relic cleanup)
+    await start_scheduler()
+    
+    # Create backup on startup if enabled
+    if settings.BACKUP_ENABLED and settings.BACKUP_ON_STARTUP:
+        import logging
+        logger = logging.getLogger('relic.main')
+        logger.info("Creating startup backup...")
+        await perform_backup(backup_type='startup')
 
 
 @app.on_event("shutdown")
@@ -74,7 +74,7 @@ async def shutdown_event():
             await perform_backup(backup_type='shutdown')
 
         # Stop scheduler
-        await shutdown_backup_scheduler()
+        await shutdown_scheduler()
 
 
 @app.get("/health")

@@ -17,16 +17,11 @@ import re
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Tuple
 from urllib.parse import urlparse
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
 
 from backend.config import settings
 from backend.storage import storage_service
 
 logger = logging.getLogger('relic.backup')
-
-# Global scheduler instance
-scheduler: Optional[AsyncIOScheduler] = None
 
 
 # ===== Core Backup Functions =====
@@ -260,63 +255,6 @@ def classify_backups(backups: List[Dict]) -> Dict[str, List[Dict]]:
     )
 
     return {'to_keep': to_keep, 'to_delete': to_delete}
-
-
-# ===== Scheduling =====
-
-async def start_backup_scheduler() -> None:
-    """Initialize and start the backup scheduler."""
-    global scheduler
-
-    if not settings.BACKUP_ENABLED:
-        logger.info("Backups disabled via BACKUP_ENABLED=false")
-        return
-
-    logger.info("Starting backup scheduler...")
-
-    scheduler = AsyncIOScheduler(timezone=settings.BACKUP_TIMEZONE)
-
-    # Parse backup times from config and add cron jobs
-    backup_times = settings.get_backup_times()
-    logger.info(f"Scheduling backups for times: {backup_times}")
-
-    for hour, minute in backup_times:
-        job_id = f'backup_{hour:02d}{minute:02d}'
-        scheduler.add_job(
-            func=perform_backup,
-            trigger=CronTrigger(hour=hour, minute=minute, timezone=settings.BACKUP_TIMEZONE),
-            id=job_id,
-            name=f'Database Backup {hour:02d}:{minute:02d}',
-            kwargs={'backup_type': 'scheduled'},
-            replace_existing=True
-        )
-        logger.debug(f"Scheduled backup job: {job_id}")
-
-    # Add daily cleanup job at 3 AM (if enabled)
-    if settings.BACKUP_CLEANUP_ENABLED:
-        scheduler.add_job(
-            func=cleanup_old_backups,
-            trigger=CronTrigger(hour=3, minute=0, timezone=settings.BACKUP_TIMEZONE),
-            id='backup_cleanup',
-            name='Backup Retention Cleanup',
-            replace_existing=True
-        )
-        logger.debug("Scheduled cleanup job: backup_cleanup at 03:00")
-    else:
-        logger.info("Backup cleanup disabled via BACKUP_CLEANUP_ENABLED=false")
-
-    scheduler.start()
-    logger.info("Backup scheduler started successfully")
-
-
-async def shutdown_backup_scheduler() -> None:
-    """Gracefully shutdown the backup scheduler."""
-    global scheduler
-
-    if scheduler:
-        logger.info("Shutting down backup scheduler...")
-        scheduler.shutdown(wait=True)
-        logger.info("Backup scheduler stopped")
 
 
 # ===== Utilities =====

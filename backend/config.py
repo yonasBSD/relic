@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     BACKUP_ON_SHUTDOWN: bool = os.getenv("BACKUP_ON_SHUTDOWN", "true").lower() == "true"
 
     # Admin Configuration
+    RELIC_CLEANUP_INTERVAL: int = int(os.getenv("RELIC_CLEANUP_INTERVAL", "60"))  # Minutes
     ADMIN_CLIENT_IDS: str = os.getenv("ADMIN_CLIENT_IDS", "")
 
     # CORS - accept as string from env, parse in validator
