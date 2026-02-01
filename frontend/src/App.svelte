@@ -282,18 +282,27 @@
     <div class="max-w-7xl mx-auto px-6">
       <div class="flex items-center justify-between h-16">
         <!-- Logo and Brand -->
-        <button
-          on:click={() => handleNavigation("recent")}
-          class="logo-button flex items-center gap-3 hover:opacity-80 transition-opacity"
-          title="Go to Recent Relics"
-        >
-          <div class="font-bold text-xl tracking-tight">
-            RELIC <span class="font-light opacity-80">Bin</span>
-          </div>
-          <span class="text-xs bg-black/20 px-2 py-0.5 rounded text-white/70"
-            >{appVersion}</span
+        <div class="flex items-center gap-3">
+          <button
+            on:click={() => handleNavigation("recent")}
+            class="logo-button flex items-center hover:opacity-80 transition-opacity"
+            title="Go to Recent Relics"
           >
-        </button>
+            <div class="font-bold text-xl tracking-tight">
+              RELIC <span class="font-light opacity-80">Bin</span>
+            </div>
+          </button>
+          
+          <a
+            href="https://github.com/ovidiuvio/relic"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-xs bg-black/20 px-2 py-0.5 rounded text-white/70 hover:bg-black/30 hover:text-white transition-all"
+            title="View Source on GitHub"
+          >
+            {appVersion}
+          </a>
+        </div>
 
         <!-- Top Navigation -->
         <nav class="hidden md:flex items-center space-x-1 ml-auto">
