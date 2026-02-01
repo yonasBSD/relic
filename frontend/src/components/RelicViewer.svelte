@@ -124,6 +124,14 @@
     return true;
   })();
 
+  let diffViewMode = (() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("relic_viewer_diff_view_mode");
+      return saved === "split" ? "split" : "unified";
+    }
+    return "unified";
+  })();
+
   // Dispatch initial state to parent on mount
   onMount(async () => {
     dispatch("fullwidth-toggle", { isFullWidth });
@@ -174,6 +182,10 @@
 
   $: if (typeof window !== "undefined") {
     localStorage.setItem("relic_editor_dark_mode", darkMode.toString());
+  }
+
+  $: if (typeof window !== "undefined") {
+    localStorage.setItem("relic_viewer_diff_view_mode", diffViewMode);
   }
 
   async function loadComments(id) {
@@ -582,6 +594,8 @@
         on:tag-click
         on:remove-tag={handleRemoveTag}
         {archiveContext}
+        {diffViewMode}
+        on:toggle-diff-view={() => (diffViewMode = diffViewMode === 'unified' ? 'split' : 'unified')}
       />
 
       <!-- Optional Description -->
@@ -694,6 +708,7 @@
             {comments}
             {isAdmin}
             {darkMode}
+            {diffViewMode}
             on:line-clicked={handleLineClicked}
             on:line-range-selected={handleLineRangeSelected}
             on:multi-line-selected={handleMultiLineSelected}

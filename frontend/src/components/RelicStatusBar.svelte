@@ -12,6 +12,7 @@
   export let fontSize = 13
   export let darkMode = true
   export let archiveContext = null
+  export let diffViewMode = 'unified'
 
   const dispatch = createEventDispatcher()
 </script>
@@ -215,6 +216,24 @@
     <!-- Preview/Source Tabs (for Markdown, HTML and Diff) -->
     {#if processed?.type === 'markdown' || processed?.type === 'html' || processed?.type === 'diff'}
       <div class="flex items-center gap-1">
+        {#if processed?.type === 'diff' && !showSource}
+          <div class="flex items-center bg-white border border-gray-300 rounded-md p-0.5 mr-2">
+            <button
+              on:click={() => dispatch('toggle-diff-view')}
+              class="px-2 py-0.5 rounded text-[10px] uppercase font-bold transition-all {diffViewMode === 'unified' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
+              title="Unified View"
+            >
+              Unified
+            </button>
+            <button
+              on:click={() => dispatch('toggle-diff-view')}
+              class="px-2 py-0.5 rounded text-[10px] uppercase font-bold transition-all {diffViewMode === 'split' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
+              title="Split View"
+            >
+              Split
+            </button>
+          </div>
+        {/if}
         <button
           on:click={() => dispatch('toggle-source', true)}
           class="px-2 py-1 rounded text-xs font-medium transition-colors {showSource ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}"
