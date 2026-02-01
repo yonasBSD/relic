@@ -7,6 +7,7 @@
   import HtmlRenderer from './HtmlRenderer.svelte';
   import CsvRenderer from './CsvRenderer.svelte';
   import ExcalidrawRenderer from './ExcalidrawRenderer.svelte';
+  import DiffRenderer from './DiffRenderer.svelte';
   import PDFViewer from '../PDFViewer.svelte';
   import { createEventDispatcher } from 'svelte';
 
@@ -204,7 +205,8 @@
       'csv': 'fa-file-csv', 'xlsx': 'fa-file-excel', 'xls': 'fa-file-excel',
       'zip': 'fa-file-archive', 'tar': 'fa-file-archive', 'gz': 'fa-file-archive',
       'mp4': 'fa-file-video', 'avi': 'fa-file-video', 'mov': 'fa-file-video',
-      'mp3': 'fa-file-audio', 'wav': 'fa-file-audio'
+      'mp3': 'fa-file-audio', 'wav': 'fa-file-audio',
+      'diff': 'fa-code-compare', 'patch': 'fa-code-compare'
     }
 
     return iconMap[ext] || 'fa-file'
@@ -228,7 +230,8 @@
       'gif': 'text-green-500', 'svg': 'text-green-600', 'webp': 'text-green-500',
       'pdf': 'text-red-600',
       'csv': 'text-green-600', 'xlsx': 'text-green-700', 'xls': 'text-green-700',
-      'zip': 'text-gray-600', 'tar': 'text-gray-600', 'gz': 'text-gray-600'
+      'zip': 'text-gray-600', 'tar': 'text-gray-600', 'gz': 'text-gray-600',
+      'diff': 'text-blue-500', 'patch': 'text-blue-500'
     }
 
     return colorMap[ext] || 'text-gray-400'
@@ -326,7 +329,7 @@
               </div>
             </div>
             <div class="flex items-center gap-2 flex-shrink-0">
-              {#if previewedFile?.processed?.type === 'code' || previewedFile?.processed?.type === 'text' || previewedFile?.processed?.type === 'markdown' || previewedFile?.processed?.type === 'html'}
+              {#if previewedFile?.processed?.type === 'code' || previewedFile?.processed?.type === 'text' || previewedFile?.processed?.type === 'markdown' || previewedFile?.processed?.type === 'html' || previewedFile?.processed?.type === 'diff'}
                 <button
                   on:click={() => {
                     darkMode = !darkMode;
@@ -388,6 +391,15 @@
               <ImageRenderer processed={previewedFile.processed} relicName={selectedFile.name} />
             {:else if previewedFile.processed.type === 'excalidraw'}
               <ExcalidrawRenderer processed={previewedFile.processed} />
+            {:else if previewedFile.processed.type === 'diff'}
+              <DiffRenderer
+                processed={previewedFile.processed}
+                {relicId}
+                {showSyntaxHighlighting}
+                {showLineNumbers}
+                {fontSize}
+                {darkMode}
+              />
             {:else if previewedFile.processed.type === 'pdf'}
               <PDFViewer
                 pdfDocument={previewedFile.processed.pdfDocument}
