@@ -35,6 +35,7 @@
   import ArchiveRenderer from './renderers/ArchiveRenderer.svelte';
   import ExcalidrawRenderer from './renderers/ExcalidrawRenderer.svelte';
   import RelicIndexRenderer from './renderers/RelicIndexRenderer.svelte';
+  import DiffRenderer from './renderers/DiffRenderer.svelte';
 
   const dispatch = createEventDispatcher();
 
@@ -681,6 +682,27 @@
           />
         {:else if processed.type === "relicindex"}
           <RelicIndexRenderer {processed} {relicId} />
+        {:else if processed.type === "diff"}
+          <DiffRenderer
+            {processed}
+            {relicId}
+            {showSource}
+            {showSyntaxHighlighting}
+            {showLineNumbers}
+            {showComments}
+            {fontSize}
+            {comments}
+            {isAdmin}
+            {darkMode}
+            on:line-clicked={handleLineClicked}
+            on:line-range-selected={handleLineRangeSelected}
+            on:multi-line-selected={handleMultiLineSelected}
+            on:line-copied={handleLineCopied}
+            on:createComment={handleCreateComment}
+            on:updateComment={handleUpdateComment}
+            on:deleteComment={handleDeleteComment}
+            on:toggle-comments={() => (showComments = !showComments)}
+          />
         {:else if processed.type === "excalidraw"}
           <ExcalidrawRenderer {processed} {relicId} {relic} />
         {:else}

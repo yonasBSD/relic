@@ -116,7 +116,7 @@ export function getAvailableSyntaxOptions() {
 
   // Filter FILE_TYPES to only include code-related categories
   const codeTypes = FILE_TYPES.filter(t =>
-    ['code', 'text', 'markdown', 'html'].includes(t.category)
+    ['code', 'text', 'markdown', 'html', 'diff'].includes(t.category)
   )
 
   // Get popular languages first

@@ -950,7 +950,7 @@ export const FILE_TYPES = [
         icon: 'fa-code-compare',
         mime: 'text/x-diff',
         extensions: ['diff', 'patch'],
-        category: 'code'
+        category: 'diff'
     },
     {
         syntax: 'git',

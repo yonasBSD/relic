@@ -113,8 +113,8 @@
       <i class="fas {isFullWidth ? 'fa-compress' : 'fa-expand'}"></i>
     </button>
 
-    <!-- Editor Controls (for code, text, markdown/html source) -->
-    {#if processed && (processed.type === 'code' || processed.type === 'text' || (processed.type === 'markdown' && showSource) || (processed.type === 'html' && showSource))}
+    <!-- Editor Controls (for code, text, diff, markdown/html source) -->
+    {#if processed && (processed.type === 'code' || processed.type === 'text' || processed.type === 'diff' || (processed.type === 'markdown' && showSource) || (processed.type === 'html' && showSource))}
       <div class="flex items-center gap-1 border-l border-gray-300 pl-2 ml-2">
         <button
           on:click={() => dispatch('toggle-syntax')}
@@ -212,8 +212,8 @@
       </div>
     {/if}
 
-    <!-- Preview/Source Tabs (for Markdown and HTML) -->
-    {#if processed?.type === 'markdown' || processed?.type === 'html'}
+    <!-- Preview/Source Tabs (for Markdown, HTML and Diff) -->
+    {#if processed?.type === 'markdown' || processed?.type === 'html' || processed?.type === 'diff'}
       <div class="flex items-center gap-1">
         <button
           on:click={() => dispatch('toggle-source', true)}

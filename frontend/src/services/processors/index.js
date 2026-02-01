@@ -16,6 +16,7 @@ import { processMarkdown } from './markdownProcessor.js'
 import { processPDF } from './pdfProcessor.js'
 import { processArchive } from './archiveProcessor.js'
 import { processExcalidraw } from './excalidrawProcessor.js'
+import { processDiff } from './diffProcessor.js'
 
 // Re-export specific processors and helpers for direct usage
 export {
@@ -32,7 +33,8 @@ export {
   processMarkdown, // Was already re-exported
   processPDF,
   processArchive,
-  processExcalidraw
+  processExcalidraw,
+  processDiff
 }
 
 /**
@@ -66,6 +68,8 @@ export async function processContent(content, contentType, languageHint) {
       return processArchive(content, contentType)
     case 'excalidraw':
       return processExcalidraw(content, contentType)
+    case 'diff':
+      return processDiff(content)
     case 'code':
       return processCode(content, contentType, languageHint)
     case 'text':
