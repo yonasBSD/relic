@@ -241,26 +241,7 @@
     <div class="bg-gray-50 max-h-[calc(100vh-300px)] overflow-y-auto flex-shrink-0" style="width: {sidebarWidth}px">
       <!-- Archive metadata header -->
       <div class="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 z-10">
-        <div class="flex items-center justify-between mb-2">
-          <h3 class="text-sm font-semibold text-gray-900">Archive Contents</h3>
-          <span class="px-2 py-0.5 bg-gray-200 text-gray-700 rounded text-xs font-bold uppercase">
-            {processed.metadata.archiveType}
-          </span>
-        </div>
-        <div class="flex items-center gap-4 text-xs text-gray-600">
-          <span class="flex items-center gap-1">
-            <i class="fas fa-file text-gray-400"></i>
-            {processed.metadata.totalFiles}
-          </span>
-          <span class="flex items-center gap-1">
-            <i class="fas fa-folder text-gray-400"></i>
-            {processed.metadata.totalDirectories}
-          </span>
-          <span class="flex items-center gap-1">
-            <i class="fas fa-weight text-gray-400"></i>
-            {processed.metadata.totalSizeFormatted}
-          </span>
-        </div>
+        <h3 class="text-sm font-semibold text-gray-900">Archive Contents</h3>
       </div>
 
       <!-- File tree -->

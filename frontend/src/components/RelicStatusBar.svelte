@@ -11,13 +11,43 @@
   export let pdfState = null
   export let fontSize = 13
   export let darkMode = true
+  export let archiveContext = null
 
   const dispatch = createEventDispatcher()
 </script>
 
 <div class="px-6 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-3">
   <!-- Status Badges -->
-  <div class="flex flex-wrap gap-1.5">
+  <div class="flex flex-wrap gap-1.5 items-center">
+    {#if archiveContext}
+      <div 
+        class="flex items-center gap-1.5 mr-2 pr-2 border-r border-gray-300"
+        title="This file was extracted from an archive. Actions (fork, download) will work on just this file."
+      >
+        <i class="fas fa-file-archive text-purple-600 text-[10px] flex-shrink-0"></i>
+        <a 
+          href="/{archiveContext.archiveId}" 
+          class="text-[11px] font-medium text-purple-700 hover:text-purple-900 transition-colors whitespace-nowrap"
+        >
+          {archiveContext.archiveName || archiveContext.archiveId}
+        </a>
+        <i class="fas fa-chevron-right text-gray-400 text-[9px] flex-shrink-0"></i>
+        <span class="inline-flex items-center px-1.5 py-0.5 text-[10px] leading-tight font-mono text-gray-700 bg-purple-50 rounded border border-purple-100 truncate max-w-[240px]">
+          {archiveContext.filePath}
+        </span>
+      </div>
+    {/if}
+    {#if processed?.type === 'archive'}
+      <div class="flex items-center gap-1.5 mr-2 pr-2 border-r border-gray-300">
+        <i class="fas fa-file-archive text-purple-600 text-[10px]"></i>
+        <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-[10px] font-bold uppercase">
+          {processed.metadata.archiveType}
+        </span>
+        <span class="text-[11px] text-gray-500">
+          {processed.metadata.totalFiles} files
+        </span>
+      </div>
+    {/if}
     {#if relic.access_level === 'private'}
       <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium leading-none" style="background-color: #fce3eb; color: #76306c;" title="Private - accessible only via URL">
         <i class="fas fa-lock text-[10px]"></i>

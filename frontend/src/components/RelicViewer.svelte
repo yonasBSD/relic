@@ -580,6 +580,7 @@
         on:pdf-reset-zoom={() => pdfViewerRef?.resetZoomMethod()}
         on:tag-click
         on:remove-tag={handleRemoveTag}
+        {archiveContext}
       />
 
       <!-- Optional Description -->
@@ -587,31 +588,6 @@
         <div class="px-6 py-3 bg-blue-50 border-b border-gray-200">
           <p class="text-sm text-gray-700 leading-relaxed">
             {relic.description}
-          </p>
-        </div>
-      {/if}
-
-      <!-- Archive Context Breadcrumb -->
-      {#if isArchiveFile && archiveContext}
-        <div class="px-6 py-3 bg-purple-50 border-b border-purple-200">
-          <div class="flex items-center gap-2 text-sm">
-            <i class="fas fa-file-archive text-purple-600"></i>
-            <span class="text-gray-600">From archive:</span>
-            <a
-              href="/{archiveContext.archiveId}"
-              class="text-purple-700 hover:text-purple-900 font-medium hover:underline"
-            >
-              {archiveContext.archiveName || archiveContext.archiveId}
-            </a>
-            <i class="fas fa-chevron-right text-gray-400 text-xs"></i>
-            <span class="text-gray-700 font-mono text-xs"
-              >{archiveContext.filePath}</span
-            >
-          </div>
-          <p class="text-xs text-gray-600 mt-1">
-            <i class="fas fa-info-circle mr-1"></i>
-            This file was extracted from an archive. Actions (fork, download) will
-            work on just this file.
           </p>
         </div>
       {/if}
