@@ -1,4 +1,5 @@
 import { decodeContent, getTextMetadata } from './utils/contentUtils';
+import { highlightCode } from './codeProcessor.js';
 
 /**
  * Process unified diff content
@@ -13,6 +14,7 @@ export async function processDiff(content) {
   return {
     type: 'diff',
     preview: text, // Raw text for source view
+    highlighted: highlightCode(text, 'diff'),
     files,
     metadata: {
       ...metadata,

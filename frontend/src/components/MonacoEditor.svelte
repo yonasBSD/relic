@@ -37,6 +37,7 @@
   let currentFragment = null
   let lastClickedLine = null
   let selectedLines = new Set()
+  let diffDecorationIds = [] // Track diff background decoration IDs
   
   $: linesWithComments = new Set(comments.map(c => c.line_number))
   
@@ -168,6 +169,11 @@
       if (ansiDecorations && ansiDecorations.length > 0) {
         applyAnsiDecorations()
       }
+
+      // Apply Diff decorations if language is diff
+      if (getMonacoLanguage(language) === 'diff') {
+          applyDiffDecorations()
+      }
     } catch (e) {
       console.error('Failed to create Monaco Editor:', e)
     }
@@ -199,6 +205,15 @@
   $: if (editor && (showComments !== undefined)) {
     updateCommentDecorations()
     updateCommentZones()
+  }
+
+  $: if (editor && language && showSyntaxHighlighting) {
+      if (getMonacoLanguage(language) === 'diff') {
+          applyDiffDecorations()
+      } else {
+          // Clear diff decorations if switching away
+          diffDecorationIds = editor.deltaDecorations(diffDecorationIds, [])
+      }
   }
 
   /**
@@ -257,6 +272,51 @@
 
     // Inject CSS for all ANSI styles
     injectAnsiStyles()
+  }
+
+  /**
+   * Enhanced diff highlighting for Source Mode
+   * Adds background colors to lines starting with + or -
+   */
+  function applyDiffDecorations() {
+    if (!editor || !showSyntaxHighlighting) {
+        diffDecorationIds = editor.deltaDecorations(diffDecorationIds, [])
+        return
+    }
+
+    const model = editor.getModel()
+    if (!model) return
+
+    const lineCount = model.getLineCount()
+    const newDecorations = []
+
+    for (let i = 1; i <= lineCount; i++) {
+        const lineContent = model.getLineContent(i)
+        if (lineContent.startsWith('+')) {
+            newDecorations.push({
+                range: new monaco.Range(i, 1, i, lineContent.length + 1),
+                options: {
+                    inlineClassName: 'diff-text-add'
+                }
+            })
+        } else if (lineContent.startsWith('-')) {
+            newDecorations.push({
+                range: new monaco.Range(i, 1, i, lineContent.length + 1),
+                options: {
+                    inlineClassName: 'diff-text-delete'
+                }
+            })
+        } else if (lineContent.startsWith('@@')) {
+            newDecorations.push({
+                range: new monaco.Range(i, 1, i, lineContent.length + 1),
+                options: {
+                    inlineClassName: 'diff-text-hunk'
+                }
+            })
+        }
+    }
+
+    diffDecorationIds = editor.deltaDecorations(diffDecorationIds, newDecorations)
   }
 
   /**
@@ -1535,6 +1595,28 @@
   :global(.thread-reply-btn:hover) {
     background: transparent;
     color: #6b7280;
+  }
+
+  /* Diff Highlighting */
+  :global(.diff-text-add) {
+    color: #3fb950 !important;
+  }
+  :global(.diff-text-delete) {
+    color: #f85149 !important;
+  }
+  :global(.diff-text-hunk) {
+    color: #79c0ff !important;
+  }
+  
+  /* Adjusted for light mode */
+  :global(.relic-theme .diff-text-add) {
+    color: #22863a !important;
+  }
+  :global(.relic-theme .diff-text-delete) {
+    color: #d73a49 !important;
+  }
+  :global(.relic-theme .diff-text-hunk) {
+    color: #0366d6 !important;
   }
 
   </style>

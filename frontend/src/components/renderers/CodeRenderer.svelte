@@ -16,7 +16,7 @@
   const dispatch = createEventDispatcher()
   const forwardEvent = createEventForwarder(dispatch)
 
-  $: language = processed.type === 'code' ? (processed.metadata?.language || 'plaintext') : 'plaintext'
+  $: language = (processed.type === 'code' || processed.type === 'diff') ? (processed.metadata?.language || 'plaintext') : 'plaintext'
 </script>
 
 <div class="border-t border-gray-200">
