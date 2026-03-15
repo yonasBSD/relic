@@ -145,6 +145,7 @@
 
   let treeViewMode = (() => {
     if (typeof window !== "undefined") {
+      if (getCurrentLineNumberFragment()) return "code";
       return localStorage.getItem("relic_viewer_tree_mode") ?? "code";
     }
     return "code";
