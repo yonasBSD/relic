@@ -22,7 +22,7 @@
   import PDFViewer from './PDFViewer.svelte';
   import { createEventDispatcher } from 'svelte';
   import { getCurrentLineNumberFragment } from '../utils/lineNumbers';
-  import { getFileTypeDefinition } from '../services/typeUtils';
+  import { getFileTypeDefinition, getSyntaxFromExtension } from '../services/typeUtils';
 
   // Sub-components
   import RelicHeader from './RelicHeader.svelte';
@@ -36,6 +36,7 @@
   import ExcalidrawRenderer from './renderers/ExcalidrawRenderer.svelte';
   import RelicIndexRenderer from './renderers/RelicIndexRenderer.svelte';
   import DiffRenderer from './renderers/DiffRenderer.svelte';
+  import TreeRenderer from './renderers/TreeRenderer.svelte';
 
   const dispatch = createEventDispatcher();
 
@@ -54,6 +55,8 @@
   let showForkModal = false;
   let forkLoading = false;
   let pdfViewerRef = null;
+  let treeRendererRef = null;
+  let effectiveLang = null;
   let pdfState = { currentPage: 1, numPages: 0, scale: 1.5, loading: false };
   let isAdmin = false;
   let deleteLoading = false;
@@ -132,6 +135,29 @@
     return "unified";
   })();
 
+  let beautify = (() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("relic_editor_beautify");
+      return saved === "true";
+    }
+    return false;
+  })();
+
+  let treeViewMode = (() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("relic_viewer_tree_mode") ?? "code";
+    }
+    return "code";
+  })();
+
+  let treePageSize = (() => {
+    if (typeof window !== "undefined") {
+      const saved = parseInt(localStorage.getItem("relic_viewer_tree_page_size"), 10);
+      return isNaN(saved) ? 100 : saved;
+    }
+    return 100;
+  })();
+
   // Dispatch initial state to parent on mount
   onMount(async () => {
     dispatch("fullwidth-toggle", { isFullWidth });
@@ -187,6 +213,28 @@
   $: if (typeof window !== "undefined") {
     localStorage.setItem("relic_viewer_diff_view_mode", diffViewMode);
   }
+
+  $: if (typeof window !== "undefined") {
+    localStorage.setItem("relic_editor_beautify", beautify.toString());
+  }
+
+  $: if (typeof window !== "undefined") {
+    localStorage.setItem("relic_viewer_tree_mode", treeViewMode);
+  }
+
+  $: if (typeof window !== "undefined") {
+    localStorage.setItem("relic_viewer_tree_page_size", treePageSize.toString());
+  }
+
+  const TREE_LANGS = new Set(['json', 'yaml', 'yml', 'toml', 'xml'])
+  $: {
+    const metaLang = processed?.metadata?.language
+    const nameExt = relic?.name?.split('.').pop()?.toLowerCase()
+    const extLang = getSyntaxFromExtension(nameExt)
+    effectiveLang = TREE_LANGS.has(metaLang) ? metaLang : (TREE_LANGS.has(extLang) ? extLang : metaLang)
+  }
+  $: isTreeSupported = TREE_LANGS.has(effectiveLang)
+  $: isFormattable = effectiveLang === 'json'
 
   async function loadComments(id) {
     try {
@@ -596,6 +644,16 @@
         {archiveContext}
         {diffViewMode}
         on:toggle-diff-view={() => (diffViewMode = diffViewMode === 'unified' ? 'split' : 'unified')}
+        {beautify}
+        {isFormattable}
+        {treeViewMode}
+        {isTreeSupported}
+        on:toggle-beautify={() => (beautify = !beautify)}
+        on:toggle-tree-view={(e) => (treeViewMode = e.detail)}
+        on:tree-expand-all={() => treeRendererRef?.expandAll()}
+        on:tree-collapse-all={() => treeRendererRef?.collapseAll()}
+        {treePageSize}
+        on:set-tree-page-size={(e) => (treePageSize = e.detail)}
       />
 
       <!-- Optional Description -->
@@ -651,25 +709,39 @@
             on:toggle-comments={() => (showComments = !showComments)}
           />
         {:else if processed.type === "code" || processed.type === "text"}
-          <CodeRenderer
-            {processed}
-            {relicId}
-            {showSyntaxHighlighting}
-            {showLineNumbers}
-            {showComments}
-            {fontSize}
-            {comments}
-            {isAdmin}
-            {darkMode}
-            on:line-clicked={handleLineClicked}
-            on:line-range-selected={handleLineRangeSelected}
-            on:multi-line-selected={handleMultiLineSelected}
-            on:line-copied={handleLineCopied}
-            on:createComment={handleCreateComment}
-            on:updateComment={handleUpdateComment}
-            on:deleteComment={handleDeleteComment}
-            on:toggle-comments={() => (showComments = !showComments)}
-          />
+          {#if isTreeSupported && treeViewMode === 'tree'}
+            <TreeRenderer
+              bind:this={treeRendererRef}
+              {processed}
+              {darkMode}
+              {fontSize}
+              lang={effectiveLang}
+              pageSize={treePageSize}
+              on:parse-error={() => (treeViewMode = 'code')}
+            />
+          {:else}
+            <CodeRenderer
+              {processed}
+              {relicId}
+              {showSyntaxHighlighting}
+              {showLineNumbers}
+              {showComments}
+              {fontSize}
+              {comments}
+              {isAdmin}
+              {darkMode}
+              {beautify}
+              {isFormattable}
+              on:line-clicked={handleLineClicked}
+              on:line-range-selected={handleLineRangeSelected}
+              on:multi-line-selected={handleMultiLineSelected}
+              on:line-copied={handleLineCopied}
+              on:createComment={handleCreateComment}
+              on:updateComment={handleUpdateComment}
+              on:deleteComment={handleDeleteComment}
+              on:toggle-comments={() => (showComments = !showComments)}
+            />
+          {/if}
         {:else if processed.type === "image"}
           <ImageRenderer {processed} relicName={relic.name} />
         {:else if processed.type === "pdf"}

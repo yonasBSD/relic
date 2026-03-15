@@ -13,6 +13,11 @@
   export let darkMode = true
   export let archiveContext = null
   export let diffViewMode = 'unified'
+  export let beautify = false
+  export let isFormattable = false
+  export let treeViewMode = 'code'
+  export let isTreeSupported = false
+  export let treePageSize = 100
 
   const dispatch = createEventDispatcher()
 </script>
@@ -114,8 +119,75 @@
       <i class="fas {isFullWidth ? 'fa-compress' : 'fa-expand'}"></i>
     </button>
 
+    <!-- Expand All / Collapse All + Dark Mode (tree mode only) -->
+    {#if isTreeSupported && treeViewMode === 'tree' && (processed?.type === 'code' || processed?.type === 'text')}
+      <div class="flex items-center gap-1 border-l border-gray-300 pl-2 ml-2">
+        <button
+          on:click={() => dispatch('tree-expand-all')}
+          class="px-2 py-1 rounded text-xs font-medium transition-colors text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+          title="Expand all"
+        >
+          <i class="fas fa-plus-square text-xs"></i>
+        </button>
+        <button
+          on:click={() => dispatch('tree-collapse-all')}
+          class="px-2 py-1 rounded text-xs font-medium transition-colors text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+          title="Collapse all"
+        >
+          <i class="fas fa-minus-square text-xs"></i>
+        </button>
+        <button
+          on:click={() => dispatch('toggle-dark-mode')}
+          class="px-2 py-1 rounded text-xs transition-colors {darkMode ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}"
+          title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          <i class="fas {darkMode ? 'fa-moon' : 'fa-sun'}"></i>
+        </button>
+        <select
+          value={treePageSize}
+          on:change={(e) => dispatch('set-tree-page-size', parseInt(e.target.value, 10))}
+          class="text-xs rounded border border-gray-300 pl-1 pr-6 py-0.5 text-gray-600 bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
+          title="Nodes per page"
+        >
+          {#each [25, 50, 100, 250, 500] as size}
+            <option value={size}>{size} / pg</option>
+          {/each}
+        </select>
+        <div class="flex items-center gap-1 border-l border-gray-300 pl-2 ml-1">
+          <i class="fas fa-text-height text-xs text-gray-600"></i>
+          <select
+            value={fontSize.toString()}
+            on:change={(e) => {
+              const val = e.target.value
+              if (val === 'custom') {
+                const custom = prompt('Enter font size (8-72):', fontSize.toString())
+                if (custom && !isNaN(parseInt(custom, 10))) {
+                  const num = parseInt(custom, 10)
+                  if (num >= 8 && num <= 72) dispatch('update-font-size', num)
+                }
+              } else {
+                dispatch('update-font-size', parseInt(val, 10))
+              }
+            }}
+            class="pl-1.5 pr-0.5 py-1 rounded text-xs bg-white border border-gray-300 text-gray-700 cursor-pointer hover:border-gray-400"
+            style="min-width: fit-content; width: auto;"
+            title="Font size"
+          >
+            <option value="12">12</option>
+            <option value="13">13</option>
+            <option value="14">14</option>
+            <option value="15">15</option>
+            <option value="16">16</option>
+            <option value="18">18</option>
+            <option value="20">20</option>
+            <option value="custom">Custom...</option>
+          </select>
+        </div>
+      </div>
+    {/if}
+
     <!-- Editor Controls (for code, text, diff, markdown/html source) -->
-    {#if processed && (processed.type === 'code' || processed.type === 'text' || processed.type === 'diff' || (processed.type === 'markdown' && showSource) || (processed.type === 'html' && showSource))}
+    {#if processed && (processed.type === 'code' || processed.type === 'text' || processed.type === 'diff' || (processed.type === 'markdown' && showSource) || (processed.type === 'html' && showSource)) && !(isTreeSupported && treeViewMode === 'tree')}
       <div class="flex items-center gap-1 border-l border-gray-300 pl-2 ml-2">
         <button
           on:click={() => dispatch('toggle-syntax')}
@@ -138,6 +210,16 @@
         >
           <i class="fas fa-comment-alt text-[10px]"></i>
         </button>
+        <!-- Beautify (only for formattable languages) -->
+        {#if isFormattable}
+          <button
+            on:click={() => dispatch('toggle-beautify')}
+            class="px-2 py-1 rounded text-xs font-medium transition-colors {beautify ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}"
+            title="Toggle pretty-print / beautify"
+          >
+            <i class="fas fa-magic text-xs"></i>
+          </button>
+        {/if}
 
         <!-- Font Size Combo Box -->
         <div class="flex items-center gap-2 border-l border-gray-300 pl-2 ml-2">
@@ -247,6 +329,26 @@
           title="Show preview"
         >
           <i class="fas fa-eye"></i>
+        </button>
+      </div>
+    {/if}
+
+    <!-- Code/Explorer Toggle (for structured data) — always last so position is stable -->
+    {#if isTreeSupported && (processed?.type === 'code' || processed?.type === 'text')}
+      <div class="flex items-center bg-white border border-gray-300 rounded-md p-0.5 ml-2">
+        <button
+          on:click={() => dispatch('toggle-tree-view', 'code')}
+          class="px-2 py-0.5 rounded text-[10px] uppercase font-bold transition-all {treeViewMode === 'code' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
+          title="Code view"
+        >
+          Code
+        </button>
+        <button
+          on:click={() => dispatch('toggle-tree-view', 'tree')}
+          class="px-2 py-0.5 rounded text-[10px] uppercase font-bold transition-all {treeViewMode === 'tree' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
+          title="Explorer tree view"
+        >
+          Explorer
         </button>
       </div>
     {/if}
