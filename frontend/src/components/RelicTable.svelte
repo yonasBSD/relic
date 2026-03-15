@@ -17,6 +17,8 @@
   export let emptyMessage = 'No relics yet'
   export let emptyMessageWithSearch = 'No relics found'
   export let showItemsCount = true
+  export let showHeader = true
+  export let embedded = false
   export let emptyIcon = 'fa-inbox'
   export let emptyAction = 'Create your first relic to get started!'
   export let columnHeaders = {
@@ -37,7 +39,7 @@
   export let onEdit = null // function(relic) for edit action
   export let onDelete = null // function(relic) for delete action
   export let onRemoveBookmark = null // function(relic) for remove bookmark action
-  export let customActions = [] // Array of { icon, color, title, handler, position }
+  export let customActions = [] // Array of { icon, color, title, action }
 
   // Unique ID for form elements
   export let tableId = 'relics'
@@ -77,8 +79,9 @@
   }
 </script>
 
-<div class="bg-white shadow-sm rounded-lg border border-gray-200">
-  <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+<div class="{embedded ? '' : 'bg-white shadow-sm rounded-lg border border-gray-200'}">
+  {#if showHeader}
+    <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
     <div class="flex items-center gap-3">
       <h2 class="text-lg font-semibold text-gray-900 flex items-center">
         <i class="fas {titleIcon} {titleIconColor} mr-2"></i>
@@ -112,6 +115,7 @@
       />
     </div>
   </div>
+{/if}
 
   {#if loading}
     <div class="p-8 text-center">
@@ -234,17 +238,6 @@
                     </button>
                   {/if}
 
-                  <!-- Custom actions -->
-                  {#each customActions as action}
-                    <button
-                      on:click|stopPropagation={() => action.handler(relic)}
-                      class="p-1.5 text-{action.color}-400 hover:text-{action.color}-600 hover:bg-{action.color}-50 rounded transition-colors"
-                      title={action.title}
-                    >
-                      <i class="fas {action.icon} text-xs"></i>
-                    </button>
-                  {/each}
-
                   <!-- Standard actions -->
                   <button
                     on:click|stopPropagation={() => shareRelic(relic.id)}
@@ -294,6 +287,17 @@
                       <i class="fas fa-edit text-xs"></i>
                     </button>
                   {/if}
+                  
+                  <!-- Custom actions -->
+                  {#each customActions as action}
+                    <button
+                      on:click|stopPropagation={() => action.handler(relic)}
+                      class="p-1.5 text-{action.color}-600 hover:text-{action.color}-700 hover:bg-{action.color}-50 rounded transition-colors"
+                      title={action.title}
+                    >
+                      <i class="fas {action.icon} text-xs"></i>
+                    </button>
+                  {/each}
 
                   <!-- Delete button - always last as it's destructive -->
                   {#if onDelete}

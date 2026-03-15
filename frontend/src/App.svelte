@@ -6,6 +6,8 @@
   import MyRelics from "./components/MyRelics.svelte";
   import MyBookmarks from "./components/MyBookmarks.svelte";
   import AdminPanel from "./components/AdminPanel.svelte";
+  import SpacesList from "./components/SpacesList.svelte";
+  import SpaceViewer from "./components/SpaceViewer.svelte";
   import Toast from "./components/Toast.svelte";
   import { toastStore } from "./stores/toastStore";
   import { getOrCreateClientKey, checkAdminStatus, updateClientName, registerClient, getVersion } from "./services/api";
@@ -21,17 +23,20 @@
   let isNameSaving = false;
   let appVersion = "loading...";
   let activeTagFilter = null;
+  let activeSpaceParam = null;
 
   function updateRouting() {
     const path = window.location.pathname;
     const parts = path.split("/").filter((p) => p);
     const urlParams = new URLSearchParams(window.location.search);
     const tagParam = urlParams.get('tag');
+    const spaceParam = urlParams.get('space');
 
-    console.log("[App] Route update - path:", path, "parts:", parts, "tag:", tagParam);
+    console.log("[App] Route update - path:", path, "parts:", parts, "tag:", tagParam, "space:", spaceParam);
 
     // Update tag filter from URL
     activeTagFilter = tagParam;
+    activeSpaceParam = spaceParam;
 
     if (
       parts.length >= 1 &&
@@ -40,6 +45,7 @@
       parts[0] !== "recent" &&
       parts[0] !== "my-relics" &&
       parts[0] !== "my-bookmarks" &&
+      parts[0] !== "spaces" &&
       parts[0] !== "new" &&
       parts[0] !== "admin"
     ) {
@@ -61,6 +67,11 @@
       currentSection = "new";
       currentRelicId = null;
       currentFilePath = null;
+    } else if (parts[0] === "spaces" && parts.length > 1) {
+      console.log("[App] Navigating to space view:", parts[1]);
+      currentSection = "space-view";
+      currentRelicId = parts[1]; // Using currentRelicId to store the space_id
+      currentFilePath = null;
     } else {
       console.log("[App] Navigating to section:", parts[0]);
       currentSection = parts[0];
@@ -77,6 +88,8 @@
       currentFilePath,
       "tagFilter:",
       activeTagFilter,
+      "spaceParam:",
+      activeSpaceParam
     );
   }
 
@@ -155,15 +168,12 @@
   }
 
   function handleNavigation(section) {
-    currentSection = section;
-    currentRelicId = null;
-    activeTagFilter = null;
-
     if (section === "new") {
       window.history.pushState({}, "", "/");
     } else {
       window.history.pushState({}, "", `/${section}`);
     }
+    updateRouting();
   }
 
   function handleTagClick(event) {
@@ -171,12 +181,16 @@
     activeTagFilter = tagName;
     
     // If we're already in a list section that supports tag filtering, stay there
-    if (currentSection !== "recent" && currentSection !== "my-relics" && currentSection !== "my-bookmarks") {
+    if (currentSection !== "recent" && currentSection !== "my-relics" && currentSection !== "my-bookmarks" && currentSection !== "space-view") {
       currentSection = "recent"; // Default to recent (public) view for discovering tags
     }
     
-    currentRelicId = null;
-    window.history.pushState({}, "", `/${currentSection}?tag=${encodeURIComponent(tagName)}`);
+    if (currentSection === "space-view") {
+        window.history.pushState({}, "", `/spaces/${currentRelicId}?tag=${encodeURIComponent(tagName)}`);
+    } else {
+        currentRelicId = null;
+        window.history.pushState({}, "", `/${currentSection}?tag=${encodeURIComponent(tagName)}`);
+    }
   }
 
   function downloadClientKey() {
@@ -323,6 +337,14 @@
             <i class="fas fa-clock mr-2"></i>Recent
           </button>
           <button
+            on:click={() => handleNavigation("spaces")}
+            class="maas-nav-top {currentSection === 'spaces' || currentSection === 'space-view'
+              ? 'active'
+              : ''} px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+          >
+            <i class="fas fa-layer-group mr-2"></i>Spaces
+          </button>
+          <button
             on:click={() => handleNavigation("my-relics")}
             class="maas-nav-top {currentSection === 'my-relics'
               ? 'active'
@@ -460,13 +482,26 @@
           on:tag-click={handleTagClick}
         />
       {:else if currentSection === "new" || currentSection === "default" || currentSection === ""}
-        <RelicForm />
+        <RelicForm spaceId={activeSpaceParam} />
       {:else if currentSection === "recent"}
         <RecentRelics tagFilter={activeTagFilter} on:tag-click={handleTagClick} />
       {:else if currentSection === "my-relics"}
         <MyRelics tagFilter={activeTagFilter} on:tag-click={handleTagClick} />
       {:else if currentSection === "my-bookmarks"}
         <MyBookmarks tagFilter={activeTagFilter} on:tag-click={handleTagClick} />
+      {:else if currentSection === "spaces"}
+        <SpacesList on:navigate={(e) => handleNavigation(e.detail.path)} />
+      {:else if currentSection === "space-view" && currentRelicId}
+        <SpaceViewer
+          spaceId={currentRelicId}
+          tagFilter={activeTagFilter}
+          on:navigate={(e) => handleNavigation(e.detail.path)}
+          on:tag-click={handleTagClick}
+          on:clear-tag-filter={() => {
+            activeTagFilter = null;
+            window.history.pushState({}, "", `/spaces/${currentRelicId}`);
+          }}
+        />
       {:else if currentSection === "admin"}
         <AdminPanel />
       {/if}
