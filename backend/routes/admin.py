@@ -5,7 +5,7 @@ from fastapi.responses import Response
 
 logger = logging.getLogger(__name__)
 from sqlalchemy import func
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, selectinload, joinedload
 from typing import Optional
 
 from backend.config import settings
@@ -387,14 +387,16 @@ async def admin_list_reports(
     get_admin_client(request, db)
 
     total = db.query(RelicReport).count()
-    reports = db.query(RelicReport).order_by(
+
+    # ⚡ Bolt: Use joinedload(RelicReport.relic) to prevent N+1 queries when accessing relic.name later
+    reports = db.query(RelicReport).options(joinedload(RelicReport.relic)).order_by(
         RelicReport.created_at.desc()
     ).offset(offset).limit(limit).all()
 
     # Enrich with relic names
     report_responses = []
     for r in reports:
-        relic = db.query(Relic).filter(Relic.id == r.relic_id).first()
+        relic = r.relic
         report_responses.append({
             "id": r.id,
             "relic_id": r.relic_id,
