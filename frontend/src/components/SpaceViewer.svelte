@@ -254,10 +254,13 @@
     <div class="space-y-6">
         <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
             <!-- Space Header -->
-            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50/50">
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-3 mb-1">
-                            <h1 class="text-xl font-bold text-gray-900 truncate">{space.name}</h1>
+                        <h2 class="text-lg font-semibold text-gray-900 flex items-center truncate">
+                            <i class="fas fa-layer-group text-blue-600 mr-2"></i>
+                            {space.name}
+                        </h2>
                             {#if tagFilter}
                                 <div class="flex items-center animate-fade-in">
                                     <div class="h-4 w-[1px] bg-gray-300 mx-1"></div>
