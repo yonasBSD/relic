@@ -18,6 +18,8 @@ from datetime import datetime
 from typing import List, Dict
 from urllib.parse import urlparse
 
+from sqlalchemy import text
+
 from backend.config import settings
 from backend.storage import storage_service
 
@@ -94,6 +96,69 @@ async def perform_backup(backup_type: str = 'scheduled') -> bool:
                 return False
 
     return False
+
+
+async def perform_restore(filename: str, engine) -> dict:
+    """
+    Restore the database from a backup file stored in S3.
+
+    Sequence:
+    1. Validate filename format
+    2. Terminate all other active DB connections
+    3. Dispose SQLAlchemy connection pool
+    4. Download + decompress backup from S3
+    5. Pipe SQL to psql subprocess
+
+    Note: After restore, the DB reflects the backup's Alembic migration state.
+    The service does NOT auto-run 'alembic upgrade head'.
+    """
+    if not filename.startswith('backup-') or not filename.endswith('.sql.gz'):
+        raise ValueError(f"Invalid backup filename: {filename}")
+
+    db_info = parse_database_url(settings.DATABASE_URL)
+
+    # Terminate all active connections except our own, then recycle the pool
+    logger.info(f"Terminating active connections for restore: {filename}")
+    with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
+        conn.execute(
+            text("""
+                SELECT pg_terminate_backend(pid)
+                FROM pg_stat_activity
+                WHERE datname = :dbname
+                  AND pid <> pg_backend_pid()
+                  AND state IS NOT NULL
+            """),
+            {"dbname": db_info['database']}
+        )
+    engine.dispose()
+
+    # Download and decompress backup
+    logger.info(f"Downloading backup from S3: db/{filename}")
+    compressed = await storage_service.download(f"db/{filename}")
+    sql_bytes = gzip.decompress(compressed)
+    logger.info(f"Decompressed {len(compressed):,} -> {len(sql_bytes):,} bytes")
+
+    # Restore via psql
+    process = await asyncio.create_subprocess_exec(
+        'psql',
+        '-h', db_info['host'],
+        '-p', str(db_info['port']),
+        '-U', db_info['user'],
+        '-d', db_info['database'],
+        stdin=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        env={'PGPASSWORD': db_info['password']}
+    )
+    stdout, stderr = await process.communicate(input=sql_bytes)
+
+    if process.returncode != 0:
+        error_msg = stderr.decode(errors='replace')
+        logger.error(f"psql restore failed (rc={process.returncode}): {error_msg}")
+        raise RuntimeError(f"psql restore failed: {error_msg[:500]}")
+
+    logger.info(f"Database restore completed successfully: {filename}")
+    return {'success': True, 'filename': filename, 'message': 'Restore completed successfully'}
 
 
 async def cleanup_old_backups() -> None:

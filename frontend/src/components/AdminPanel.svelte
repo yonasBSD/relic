@@ -10,6 +10,7 @@
         getAdminBackups,
         createAdminBackup,
         downloadAdminBackup,
+        restoreAdminBackup,
         deleteRelic,
         deleteClient,
         getAdminReports,
@@ -72,6 +73,11 @@
     let backupsPage = 1;
     let backupsLimit = 25;
     let backupInProgress = false;
+
+    // Restore state
+    let restoreModalOpen = false;
+    let restoreTarget = null;
+    let restoreInProgress = false;
 
     // Reports state
     let reports = [];
@@ -222,6 +228,33 @@
             showToast("Failed to create backup", "error");
         } finally {
             backupInProgress = false;
+        }
+    }
+
+    function openRestoreModal(backup) {
+        restoreTarget = backup;
+        restoreModalOpen = true;
+    }
+
+    function closeRestoreModal() {
+        if (restoreInProgress) return;
+        restoreModalOpen = false;
+        restoreTarget = null;
+    }
+
+    async function confirmRestore() {
+        if (!restoreTarget) return;
+        restoreInProgress = true;
+        try {
+            await restoreAdminBackup(restoreTarget.filename);
+            showToast("Database restored successfully", "success");
+            restoreModalOpen = false;
+            restoreTarget = null;
+            await loadBackups();
+        } catch (err) {
+            showToast(err.response?.data?.detail || "Restore failed", "error");
+        } finally {
+            restoreInProgress = false;
         }
     }
 
@@ -1090,7 +1123,7 @@
                                     class="text-gray-500 uppercase text-xs tracking-wider bg-gray-50"
                                     ><th>Backup</th><th>Timestamp</th><th
                                         >Size</th
-                                    ><th class="w-24">Actions</th></tr
+                                    ><th class="w-32">Actions</th></tr
                                 ></thead
                             >
                             <tbody>
@@ -1117,17 +1150,28 @@
                                             )}</td
                                         >
                                         <td>
-                                            <button
-                                                on:click={() =>
-                                                    downloadAdminBackup(
-                                                        backup.filename,
-                                                    )}
-                                                class="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded transition-colors"
-                                                title="Download backup"
-                                                ><i
-                                                    class="fas fa-download text-xs"
-                                                ></i></button
-                                            >
+                                            <div class="flex items-center gap-1">
+                                                <button
+                                                    on:click={() =>
+                                                        downloadAdminBackup(
+                                                            backup.filename,
+                                                        )}
+                                                    class="p-1.5 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded transition-colors"
+                                                    title="Download backup"
+                                                    ><i
+                                                        class="fas fa-download text-xs"
+                                                    ></i></button
+                                                >
+                                                <button
+                                                    on:click={() =>
+                                                        openRestoreModal(backup)}
+                                                    class="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                    title="Restore database from this backup"
+                                                    ><i
+                                                        class="fas fa-undo text-xs"
+                                                    ></i></button
+                                                >
+                                            </div>
                                         </td>
                                     </tr>
                                 {/each}
@@ -1270,3 +1314,67 @@
         </div>
     {/if}
 </div>
+
+{#if restoreModalOpen && restoreTarget}
+    <!-- svelte-ignore a11y-click-events-have-key-events -->
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
+    <div
+        class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+        on:click={closeRestoreModal}
+    >
+        <!-- svelte-ignore a11y-click-events-have-key-events -->
+        <!-- svelte-ignore a11y-no-static-element-interactions -->
+        <div
+            class="bg-white rounded-lg shadow-xl w-full max-w-md"
+            on:click|stopPropagation
+        >
+            <div class="px-6 py-4 border-b border-red-200 bg-red-50 rounded-t-lg flex items-center gap-3">
+                <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+                <h2 class="text-lg font-semibold text-red-900">Restore Database</h2>
+            </div>
+
+            <div class="px-6 py-5 space-y-4">
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-800">
+                    <p class="font-semibold mb-1">This action is irreversible.</p>
+                    <p>All current data will be permanently replaced with the contents of this backup.</p>
+                </div>
+
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm">
+                    <p class="text-gray-500 text-xs uppercase tracking-wider mb-2">Backup to restore</p>
+                    <p class="font-mono text-gray-900 break-all">{restoreTarget.filename}</p>
+                    <p class="text-gray-500 text-xs mt-1">
+                        {formatDate(restoreTarget.timestamp)} &bull; {formatBytes(restoreTarget.size_bytes)}
+                    </p>
+                </div>
+
+                <p class="text-sm text-gray-600">
+                    Active database connections will be terminated. The service will remain up
+                    and new connections will reflect the restored state immediately.
+                </p>
+            </div>
+
+            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-lg flex justify-end gap-3">
+                <button
+                    type="button"
+                    on:click={closeRestoreModal}
+                    disabled={restoreInProgress}
+                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="button"
+                    on:click={confirmRestore}
+                    disabled={restoreInProgress}
+                    class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
+                >
+                    {#if restoreInProgress}
+                        <i class="fas fa-spinner fa-spin"></i>Restoring...
+                    {:else}
+                        <i class="fas fa-undo"></i>Restore Database
+                    {/if}
+                </button>
+            </div>
+        </div>
+    </div>
+{/if}

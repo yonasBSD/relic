@@ -393,6 +393,44 @@ async def admin_download_backup(
         raise HTTPException(status_code=404, detail="Backup not found or an error occurred")
 
 
+@router.post("/backups/{filename}/restore", response_model=dict)
+async def admin_restore_backup(
+    filename: str,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    [ADMIN] Restore the database from a backup file. DESTRUCTIVE.
+
+    Terminates active connections, replaces all current data with backup content,
+    then recycles the SQLAlchemy connection pool.
+
+    Note: After restore, the DB reflects the backup's Alembic migration state.
+    The service does NOT auto-run 'alembic upgrade head'.
+
+    Requires admin privileges.
+    """
+    from backend.backup import perform_restore
+    from backend.database import engine
+
+    get_admin_client(request, db)
+
+    if not filename.startswith('backup-') or not filename.endswith('.sql.gz'):
+        raise HTTPException(status_code=400, detail="Invalid backup filename")
+
+    # Close the db session before restore terminates all connections.
+    # get_db's finally block will call db.close() again, which is safe (idempotent).
+    db.close()
+
+    logger.warning(f"Admin restore initiated: {filename}")
+    try:
+        result = await perform_restore(filename, engine)
+        return {"success": True, "message": result['message'], "filename": filename}
+    except Exception as e:
+        logger.error(f"Restore failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/reports", response_model=dict)
 async def admin_list_reports(
     request: Request,

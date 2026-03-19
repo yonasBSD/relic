@@ -38,6 +38,10 @@ export async function createAdminBackup() {
     return api.post('/admin/backups')
 }
 
+export async function restoreAdminBackup(filename) {
+    return api.post(`/admin/backups/${encodeURIComponent(filename)}/restore`)
+}
+
 export async function downloadAdminBackup(filename) {
     const response = await api.get(`/admin/backups/${filename}/download`, {
         responseType: 'blob'
