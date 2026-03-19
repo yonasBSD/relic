@@ -506,6 +506,7 @@
                         <option value="all">All</option>
                         <option value="public">Public</option>
                         <option value="private">Private</option>
+                        <option value="restricted">Restricted</option>
                     </select>
                     <div class="relative flex-1 max-w-md">
                         <i
@@ -555,6 +556,12 @@
                                                         class="fas fa-lock text-xs"
                                                         style="color: #76306c;"
                                                         title="Private"
+                                                    ></i>
+                                                {:else if relic.access_level === "restricted"}
+                                                    <i
+                                                        class="fas fa-user-lock text-xs"
+                                                        style="color: #b45309;"
+                                                        title="Restricted"
                                                     ></i>
                                                 {:else}
                                                     <i

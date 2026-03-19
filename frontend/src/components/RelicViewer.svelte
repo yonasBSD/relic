@@ -48,6 +48,7 @@
   let relic = null;
   let processed = null;
   let loading = true;
+  let errorStatus = null; // null | 403 | 404 | 410 | 'unknown'
   let isArchiveFile = false; // True if viewing a file from within an archive
   let archiveContext = null; // Metadata about the archive (for breadcrumbs)
   let showSource = false; // Unified source view toggle
@@ -294,6 +295,7 @@
   async function loadRelic(id) {
     if (!id) return;
     loading = true;
+    errorStatus = null;
     relic = null;
     processed = null;
     showSource = false;
@@ -339,7 +341,7 @@
       console.log("[RelicViewer] Relic loaded successfully");
     } catch (error) {
       console.error("[RelicViewer] Error loading relic:", error);
-      showToast("Failed to load relic: " + error.message, "error");
+      errorStatus = error.response?.status || 'unknown';
     } finally {
       loading = false;
     }
@@ -678,6 +680,7 @@
         on:set-tree-page-size={(e) => (treePageSize = e.detail)}
         on:show-lineage={() => (showLineageModal = true)}
         {hasLineage}
+        on:update={handleRelicUpdate}
       />
 
       <!-- Optional Description -->
@@ -841,11 +844,44 @@
       {/if}
     </div>
   </div>
+{:else if errorStatus === 403}
+  <div class="flex items-center justify-center py-16">
+    <div class="text-center max-w-sm">
+      <div class="w-16 h-16 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-4 border border-amber-200">
+        <i class="fas fa-user-lock text-amber-500 text-2xl"></i>
+      </div>
+      <h2 class="text-lg font-bold text-gray-800 mb-1">Access Restricted</h2>
+      <p class="text-sm text-gray-500">This relic is restricted. You need to be granted access by the owner to view it.</p>
+    </div>
+  </div>
+{:else if errorStatus === 410}
+  <div class="flex items-center justify-center py-16">
+    <div class="text-center max-w-sm">
+      <div class="w-16 h-16 rounded-full bg-orange-50 flex items-center justify-center mx-auto mb-4 border border-orange-200">
+        <i class="fas fa-clock text-orange-400 text-2xl"></i>
+      </div>
+      <h2 class="text-lg font-bold text-gray-800 mb-1">Relic Expired</h2>
+      <p class="text-sm text-gray-500">This relic has expired and is no longer available.</p>
+    </div>
+  </div>
+{:else if errorStatus === 404}
+  <div class="flex items-center justify-center py-16">
+    <div class="text-center max-w-sm">
+      <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4 border border-gray-200">
+        <i class="fas fa-search text-gray-400 text-2xl"></i>
+      </div>
+      <h2 class="text-lg font-bold text-gray-800 mb-1">Relic Not Found</h2>
+      <p class="text-sm text-gray-500">This relic doesn't exist or may have been deleted.</p>
+    </div>
+  </div>
 {:else}
-  <div class="flex items-center justify-center py-12">
-    <div class="text-center">
-      <i class="fas fa-search text-gray-400 text-6xl mb-4"></i>
-      <p class="text-gray-600">Relic not found</p>
+  <div class="flex items-center justify-center py-16">
+    <div class="text-center max-w-sm">
+      <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4 border border-gray-200">
+        <i class="fas fa-search text-gray-400 text-2xl"></i>
+      </div>
+      <h2 class="text-lg font-bold text-gray-800 mb-1">Relic Not Found</h2>
+      <p class="text-sm text-gray-500">This relic doesn't exist or may have been deleted.</p>
     </div>
   </div>
 {/if}

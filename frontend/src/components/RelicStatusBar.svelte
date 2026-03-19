@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte'
+  import VisibilityModal from './VisibilityModal.svelte'
 
   export let relic
   export let processed
@@ -22,6 +23,13 @@
   export let hasLineage = false
 
   const dispatch = createEventDispatcher()
+
+  let showVisibilityModal = false
+
+  function handleVisibilityUpdate(event) {
+    relic = { ...relic, ...event.detail }
+    dispatch('update', relic)
+  }
 </script>
 
 <div class="px-6 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between flex-wrap gap-3">
@@ -57,16 +65,49 @@
       </div>
     {/if}
     {#if relic.access_level === 'private'}
-      <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium leading-none" style="background-color: #fce3eb; color: #76306c;" title="Private - accessible only via URL">
+      <svelte:element
+        this={relic.can_edit ? 'button' : 'span'}
+        on:click={relic.can_edit ? () => (showVisibilityModal = true) : undefined}
+        class="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium leading-none {relic.can_edit ? 'hover:brightness-95 cursor-pointer' : ''}"
+        style="background-color: #fce3eb; color: #76306c;"
+        title={relic.can_edit ? 'Change visibility' : 'Private - accessible only via URL'}
+      >
         <i class="fas fa-lock text-[10px]"></i>
         <span>Private</span>
-      </span>
+        {#if relic.can_edit}<i class="fas fa-chevron-down text-[8px] opacity-60 ml-0.5"></i>{/if}
+      </svelte:element>
+    {:else if relic.access_level === 'restricted'}
+      <svelte:element
+        this={relic.can_edit ? 'button' : 'span'}
+        on:click={relic.can_edit ? () => (showVisibilityModal = true) : undefined}
+        class="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium leading-none {relic.can_edit ? 'hover:brightness-95 cursor-pointer' : ''}"
+        style="background-color: #fef3c7; color: #b45309;"
+        title={relic.can_edit ? 'Change visibility / manage access' : 'Restricted - allowlist only'}
+      >
+        <i class="fas fa-user-lock text-[10px]"></i>
+        <span>Restricted</span>
+        {#if relic.can_edit}<i class="fas fa-chevron-down text-[8px] opacity-60 ml-0.5"></i>{/if}
+      </svelte:element>
     {:else if relic.access_level === 'public'}
-      <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium leading-none" style="background-color: #e2f2fd; color: #217db1;" title="Public - discoverable">
+      <svelte:element
+        this={relic.can_edit ? 'button' : 'span'}
+        on:click={relic.can_edit ? () => (showVisibilityModal = true) : undefined}
+        class="inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium leading-none {relic.can_edit ? 'hover:brightness-95 cursor-pointer' : ''}"
+        style="background-color: #e2f2fd; color: #217db1;"
+        title={relic.can_edit ? 'Change visibility' : 'Public - discoverable'}
+      >
         <i class="fas fa-globe text-[10px]"></i>
         <span>Public</span>
-      </span>
+        {#if relic.can_edit}<i class="fas fa-chevron-down text-[8px] opacity-60 ml-0.5"></i>{/if}
+      </svelte:element>
     {/if}
+
+    <VisibilityModal
+      bind:open={showVisibilityModal}
+      {relic}
+      on:close={() => (showVisibilityModal = false)}
+      on:update={handleVisibilityUpdate}
+    />
     {#if relic.fork_of}
       <div class="flex items-center gap-[1px]">
         <a href="/{relic.fork_of}" class="inline-flex items-center gap-1.5 px-2 py-1 bg-teal-100 text-teal-700 rounded-l text-xs font-medium leading-none hover:bg-teal-200 transition-colors" title="Fork of {relic.fork_of}">

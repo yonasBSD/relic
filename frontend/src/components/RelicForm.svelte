@@ -632,9 +632,11 @@
               >
                 <option value="public">Public</option>
                 <option value="private">Private</option>
+                <option value="restricted">Restricted</option>
               </select>
               <p class="text-xs text-gray-500 mt-1">
                 {#if visibility === "public"}Anyone can view this relic
+                {:else if visibility === "restricted"}Restricted - only allowed clients can access
                 {:else}Private relic - only accessible via direct URL
                 {/if}
               </p>

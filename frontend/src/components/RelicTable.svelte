@@ -172,6 +172,8 @@
                     <div class="flex items-center gap-0.5 flex-shrink-0">
                       {#if relic.access_level === 'private'}
                         <i class="fas fa-lock text-xs" style="color: #76306c;" title="Private - accessible only via URL"></i>
+                      {:else if relic.access_level === 'restricted'}
+                        <i class="fas fa-user-lock text-xs" style="color: #b45309;" title="Restricted - allowlist only"></i>
                       {:else if relic.access_level === 'public'}
                         <i class="fas fa-globe text-xs" style="color: #217db1;" title="Public - discoverable"></i>
                       {/if}

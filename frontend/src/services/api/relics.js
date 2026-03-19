@@ -88,13 +88,30 @@ export async function updateRelic(relicId, data) {
 // Let's check `api.js` original. `axios.get('/' + relicId + '/raw')`.
 // So it uses global axios to hit root path.
 import axios from 'axios'
+import { getClientKey } from './auth'
 
 export async function getRelicRaw(relicId) {
+    const clientKey = getClientKey()
+    const headers = {}
+    if (clientKey) headers['X-Client-Key'] = clientKey
     return axios.get(`/${relicId}/raw`, {
-        responseType: 'blob'
+        responseType: 'blob',
+        headers
     })
 }
 
 export async function getRelicLineage(relicId) {
     return api.get(`/relics/${relicId}/lineage`);
+}
+
+export async function getRelicAccess(relicId) {
+    return api.get(`/relics/${relicId}/access`)
+}
+
+export async function addRelicAccess(relicId, publicId) {
+    return api.post(`/relics/${relicId}/access`, { public_id: publicId })
+}
+
+export async function removeRelicAccess(relicId, publicId) {
+    return api.delete(`/relics/${relicId}/access/${publicId}`)
 }

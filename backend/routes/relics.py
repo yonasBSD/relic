@@ -9,8 +9,8 @@ import logging
 
 from backend.config import settings
 from backend.database import get_db
-from backend.models import Relic, ClientKey, Tag, Space, Comment
-from backend.schemas import RelicResponse, RelicListResponse, RelicUpdate
+from backend.models import Relic, ClientKey, Tag, Space, Comment, RelicAccess
+from backend.schemas import RelicResponse, RelicListResponse, RelicUpdate, RelicAccessAdd, RelicAccessEntry
 from backend.storage import storage_service
 from backend.utils import parse_expiry_string, is_expired, hash_password
 from backend.dependencies import (
@@ -46,10 +46,10 @@ async def create_relic(
         tags = [t.strip() for t in tags[0].split(',')]
 
     # Validate access_level
-    if access_level not in ("public", "private"):
+    if access_level not in ("public", "private", "restricted"):
         raise HTTPException(
             status_code=400,
-            detail="Invalid access_level. Must be 'public' or 'private'."
+            detail="Invalid access_level. Must be 'public', 'private', or 'restricted'."
         )
 
     # Get or create client
@@ -139,7 +139,10 @@ async def get_relic(
     db: Session = Depends(get_db)
 ):
     """Get relic metadata."""
-    relic = db.query(Relic).options(selectinload(Relic.tags)).filter(Relic.id == relic_id).first()
+    relic = db.query(Relic).options(
+        selectinload(Relic.tags),
+        selectinload(Relic.access_list)
+    ).filter(Relic.id == relic_id).first()
 
     if not relic:
         raise HTTPException(status_code=404, detail="Relic not found")
@@ -151,6 +154,7 @@ async def get_relic(
     # access_level only affects listing in recents:
     # - public: listed and discoverable
     # - private: not listed (URL serves as access token)
+    # - restricted: not listed, only accessible by owner/admin or explicitly allowed clients
     if relic.password_hash:
         if not password:
             raise HTTPException(status_code=403, detail="This relic requires a password")
@@ -159,6 +163,13 @@ async def get_relic(
 
     # Check if client can edit
     client = get_client_key(request, db)
+
+    # Enforce restricted access
+    if relic.access_level == "restricted":
+        if not check_ownership_or_admin(relic, client, require_auth=False):
+            allowed_ids = {a.client_id for a in relic.access_list}
+            if not client or client.id not in allowed_ids:
+                raise HTTPException(status_code=403, detail="Access restricted")
     relic.can_edit = check_ownership_or_admin(relic, client, require_auth=False)
 
     # Increment access count
@@ -175,15 +186,24 @@ async def get_relic(
 
 @router.get("/{relic_id}")
 @router.get("/{relic_id}/raw")
-async def get_relic_raw(relic_id: str, db: Session = Depends(get_db)):
+async def get_relic_raw(relic_id: str, request: Request, db: Session = Depends(get_db)):
     """Get raw relic content."""
-    relic = db.query(Relic).filter(Relic.id == relic_id).first()
+    relic = db.query(Relic).options(selectinload(Relic.access_list)).filter(Relic.id == relic_id).first()
 
     if not relic:
         raise HTTPException(status_code=404, detail="Relic not found")
 
     if is_expired(relic.expires_at):
         raise HTTPException(status_code=410, detail="Relic has expired")
+
+    # Enforce restricted access
+    if relic.access_level == "restricted":
+        client = get_client_key(request, db)
+        if not check_ownership_or_admin(relic, client, require_auth=False):
+            allowed_ids = {a.client_id for a in relic.access_list}
+            if not client or client.id not in allowed_ids:
+                raise HTTPException(status_code=403, detail="Access restricted")
+
     try:
         content = await storage_service.download(relic.s3_key)
         return StreamingResponse(
@@ -218,8 +238,8 @@ async def fork_relic(
         tags = [t.strip() for t in tags[0].split(',')]
 
     # Validate access_level
-    if access_level and access_level not in ['public', 'private']:
-        raise HTTPException(status_code=400, detail="Invalid access_level. Must be 'public' or 'private'")
+    if access_level and access_level not in ['public', 'private', 'restricted']:
+        raise HTTPException(status_code=400, detail="Invalid access_level. Must be 'public', 'private', or 'restricted'")
 
     # Get client (optional - fork is public)
     client = get_or_create_client_key(request, db)
@@ -266,7 +286,7 @@ async def fork_relic(
             size_bytes=len(content),
             s3_key=s3_key,
             fork_of=relic_id,
-            access_level=access_level or original.access_level,
+            access_level=access_level or ("private" if original.access_level == "restricted" else original.access_level),
             expires_at=expires_at
         )
 
@@ -484,3 +504,106 @@ async def list_relics(
         relic_responses.append(relic_response)
 
     return {"relics": relic_responses}
+
+
+@router.get("/api/v1/relics/{relic_id}/access", response_model=List[RelicAccessEntry])
+async def get_relic_access(relic_id: str, request: Request, db: Session = Depends(get_db)):
+    """List clients with explicit access to a restricted relic. Owner/admin only."""
+    client = get_client_key(request, db)
+    if not client:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    relic = db.query(Relic).options(selectinload(Relic.access_list)).filter(Relic.id == relic_id).first()
+    if not relic:
+        raise HTTPException(status_code=404, detail="Relic not found")
+
+    if not check_ownership_or_admin(relic, client):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    result = []
+    for entry in relic.access_list:
+        allowed_client = db.query(ClientKey).filter(ClientKey.id == entry.client_id).first()
+        result.append(RelicAccessEntry(
+            public_id=allowed_client.public_id if allowed_client else None,
+            client_name=allowed_client.name if allowed_client else None,
+            created_at=entry.created_at
+        ))
+    return result
+
+
+@router.post("/api/v1/relics/{relic_id}/access", response_model=RelicAccessEntry)
+async def add_relic_access(
+    relic_id: str,
+    body: RelicAccessAdd,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Add a client to a relic's access list by public_id. Owner/admin only."""
+    client = get_client_key(request, db)
+    if not client:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    relic = db.query(Relic).filter(Relic.id == relic_id).first()
+    if not relic:
+        raise HTTPException(status_code=404, detail="Relic not found")
+
+    if not check_ownership_or_admin(relic, client):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    target = db.query(ClientKey).filter(ClientKey.public_id == body.public_id).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    # Check for duplicate
+    existing = db.query(RelicAccess).filter(
+        RelicAccess.relic_id == relic_id,
+        RelicAccess.client_id == target.id
+    ).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Client already has access")
+
+    access_entry = RelicAccess(relic_id=relic_id, client_id=target.id)
+    db.add(access_entry)
+    db.commit()
+
+    return RelicAccessEntry(
+        public_id=target.public_id,
+        client_name=target.name,
+        created_at=access_entry.created_at
+    )
+
+
+@router.delete("/api/v1/relics/{relic_id}/access/{public_id}")
+async def remove_relic_access(
+    relic_id: str,
+    public_id: str,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Remove a client from a relic's access list by public_id. Owner/admin only."""
+    client = get_client_key(request, db)
+    if not client:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    relic = db.query(Relic).filter(Relic.id == relic_id).first()
+    if not relic:
+        raise HTTPException(status_code=404, detail="Relic not found")
+
+    if not check_ownership_or_admin(relic, client):
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    target = db.query(ClientKey).filter(ClientKey.public_id == public_id).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    entry = db.query(RelicAccess).filter(
+        RelicAccess.relic_id == relic_id,
+        RelicAccess.client_id == target.id
+    ).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Access entry not found")
+
+    db.delete(entry)
+    db.commit()
+
+    return {"message": "Access removed"}

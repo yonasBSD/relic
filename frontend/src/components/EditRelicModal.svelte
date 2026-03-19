@@ -169,7 +169,22 @@
                             />
                             <span class="ml-2 text-gray-700 dark:text-gray-300">Private</span>
                         </label>
+                        <label class="inline-flex items-center">
+                            <input
+                                type="radio"
+                                bind:group={accessLevel}
+                                value="restricted"
+                                class="form-radio text-blue-600"
+                            />
+                            <span class="ml-2 text-gray-700 dark:text-gray-300">Restricted</span>
+                        </label>
                     </div>
+                    {#if accessLevel === "restricted"}
+                        <p class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2 mt-2">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Use the <strong>Manage Access</strong> button <i class="fas fa-user-lock mx-0.5"></i> in the relic header to control who can view this relic.
+                        </p>
+                    {/if}
                 </div>
 
                 <!-- Tags -->

@@ -24,7 +24,7 @@ class RelicBase(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     language_hint: Optional[str] = None
-    access_level: Literal["public", "private"] = "public"
+    access_level: Literal["public", "private", "restricted"] = "public"
     password: Optional[str] = None
     expires_in: Optional[str] = None  # "1h", "24h", "7d", "30d", or None
     tags: List[str] = []
@@ -98,7 +98,7 @@ class RelicUpdate(BaseModel):
     name: Optional[str] = None
     content_type: Optional[str] = None
     language_hint: Optional[str] = None
-    access_level: Optional[Literal["public", "private"]] = None
+    access_level: Optional[Literal["public", "private", "restricted"]] = None
     expires_in: Optional[str] = None  # "1h", "24h", "7d", "30d", or "never"
     tags: Optional[List[str]] = None
 
@@ -112,7 +112,7 @@ class RelicResponse(BaseModel):
     language_hint: Optional[str]
     size_bytes: int
     fork_of: Optional[str]
-    access_level: Literal["public", "private"]
+    access_level: Literal["public", "private", "restricted"]
     created_at: datetime
     expires_at: Optional[datetime]
     access_count: int
@@ -189,6 +189,21 @@ class CommentResponse(CommentBase):
     author_name: Optional[str] = None
     created_at: datetime
     parent_id: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class RelicAccessAdd(BaseModel):
+    """Schema for adding a client to a relic's access list."""
+    public_id: str
+
+
+class RelicAccessEntry(BaseModel):
+    """Schema for a relic access list entry."""
+    public_id: Optional[str] = None
+    client_name: Optional[str] = None
+    created_at: datetime
 
     class Config:
         from_attributes = True

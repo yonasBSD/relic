@@ -15,6 +15,7 @@
     let relics = [];
     let loading = true;
     let loadingRelics = true;
+    let errorStatus = null;
 
     // Access management state
     let accessList = [];
@@ -61,13 +62,13 @@
 
     async function loadSpace() {
         loading = true;
+        errorStatus = null;
         try {
             space = await spacesApi.get(spaceId);
             await loadRelics();
         } catch (error) {
             console.error("Failed to load space:", error);
-            showToast("Failed to load space", "error");
-            dispatch('navigate', { path: 'spaces' });
+            errorStatus = error.response?.status || 'unknown';
         } finally {
             loading = false;
         }
@@ -469,6 +470,36 @@
                     </div>
                 {/if}
             </div>
+        </div>
+    </div>
+{:else if errorStatus === 403}
+    <div class="flex items-center justify-center py-16">
+        <div class="text-center max-w-sm">
+            <div class="w-16 h-16 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-4 border border-amber-200">
+                <i class="fas fa-user-lock text-amber-500 text-2xl"></i>
+            </div>
+            <h2 class="text-lg font-bold text-gray-800 mb-1">Access Restricted</h2>
+            <p class="text-sm text-gray-500">You don't have permission to view this space.</p>
+        </div>
+    </div>
+{:else if errorStatus === 404}
+    <div class="flex items-center justify-center py-16">
+        <div class="text-center max-w-sm">
+            <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4 border border-gray-200">
+                <i class="fas fa-search text-gray-400 text-2xl"></i>
+            </div>
+            <h2 class="text-lg font-bold text-gray-800 mb-1">Space Not Found</h2>
+            <p class="text-sm text-gray-500">This space doesn't exist or may have been deleted.</p>
+        </div>
+    </div>
+{:else if errorStatus}
+    <div class="flex items-center justify-center py-16">
+        <div class="text-center max-w-sm">
+            <div class="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4 border border-gray-200">
+                <i class="fas fa-exclamation-triangle text-gray-400 text-2xl"></i>
+            </div>
+            <h2 class="text-lg font-bold text-gray-800 mb-1">Failed to Load Space</h2>
+            <p class="text-sm text-gray-500">Something went wrong. Please try again.</p>
         </div>
     </div>
 {/if}

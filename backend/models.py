@@ -112,6 +112,28 @@ class Relic(Base):
     # Relationships
     tags = relationship("Tag", secondary=relic_tags, back_populates="relics")
     spaces = relationship("Space", secondary=space_relics, back_populates="relics")
+    access_list = relationship("RelicAccess", back_populates="relic", cascade="all, delete-orphan")
+
+class RelicAccess(Base):
+    """
+    Relic access list model.
+    Tracks which clients have access to a restricted relic.
+    """
+    __tablename__ = "relic_access"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    relic_id = Column(String(32), ForeignKey('relic.id', ondelete="CASCADE"), nullable=False, index=True)
+    client_id = Column(String(32), ForeignKey('client_key.id', ondelete="CASCADE"), nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    relic = relationship("Relic", back_populates="access_list")
+    client = relationship("ClientKey", backref="relic_accesses")
+
+    __table_args__ = (
+        UniqueConstraint('relic_id', 'client_id', name='unique_relic_client_access'),
+    )
+
 
 class ClientKey(Base):
     """Client identification key."""

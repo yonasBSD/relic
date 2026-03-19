@@ -280,13 +280,17 @@ async def get_space_relics(
         # Exclude expired relics
         or_(Relic.expires_at.is_(None), Relic.expires_at > datetime.utcnow())
     ).filter(
-        # Show public relics to everyone, or private relics to space members/admin
+        # Show public relics to everyone; private/restricted relics to space members/admin
+        # Space membership grants visibility — the adder had access when they added it
         or_(
             Relic.access_level == "public",
             and_(Relic.access_level == "private", Relic.client_id == client_id),
             and_(Relic.access_level == "private", is_admin),
-            # Private relics are visible to anyone with space access (space membership grants visibility)
-            and_(Relic.access_level == "private", client_id is not None)
+            and_(Relic.access_level == "private", client_id is not None),
+            and_(Relic.access_level == "restricted", Relic.client_id == client_id),
+            and_(Relic.access_level == "restricted", is_admin),
+            # Restricted relics are visible to anyone with space access (same as private)
+            and_(Relic.access_level == "restricted", client_id is not None),
         )
     ).order_by(Relic.created_at.desc())
 
@@ -344,10 +348,10 @@ async def add_relic_to_space(
     if not check_space_access(space, client_id, "editor"):
         raise HTTPException(status_code=403, detail="Not authorized to edit this space")
 
-    # Must have access to relic (either public or owner)
+    # Must have access to relic (either public, owner, or admin)
     is_admin = client_id in settings.get_admin_client_ids()
-    if relic.access_level == "private" and relic.client_id != client_id and not is_admin:
-         raise HTTPException(status_code=403, detail="Not authorized to access this relic")
+    if relic.access_level in ("private", "restricted") and relic.client_id != client_id and not is_admin:
+        raise HTTPException(status_code=403, detail="Not authorized to access this relic")
 
     if relic not in space.relics:
         space.relics.append(relic)
