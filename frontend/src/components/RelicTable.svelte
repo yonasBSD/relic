@@ -146,6 +146,7 @@
                 <i class="fas fa-arrow-up sort-arrow {sortBy === 'title' ? 'active' : ''} {sortBy === 'title' && sortOrder === 'desc' ? 'desc' : ''}"></i>
               </div>
             </th>
+            <th class="px-4 py-3 text-left">Tags</th>
             <th class="cursor-pointer hover:bg-gray-100 transition-colors group px-4 py-3 text-left select-none" on:click={() => handleSort('date')}>
               <div class="flex items-center gap-1.5">
                 <span>{getDateColumnHeader()}</span>
@@ -203,7 +204,7 @@
                     {/if}
                   </div>
                 </div>
-                <div class="flex items-center flex-wrap gap-2 mt-1">
+                <div class="flex items-center gap-1 mt-1">
                   <!-- Copy ID -->
                   <div class="flex items-center group gap-1">
                     <span class="text-xs text-gray-400 font-mono">{relic.id}</span>
@@ -215,21 +216,22 @@
                       <i class="fas fa-copy text-xs"></i>
                     </button>
                   </div>
-                  <!-- Tags (Bottom Row) -->
-                  {#if relic.tags && relic.tags.length > 0}
-                    <div class="flex items-center flex-wrap gap-1.5 ml-auto">
-                      {#each relic.tags as tag}
-                        <button
-                          on:click|stopPropagation={() => dispatch('tag-click', typeof tag === 'string' ? tag : tag.name)}
-                          class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
-                        >
-                          <i class="fas fa-tag mr-1 text-[8px] opacity-60"></i>
-                          {typeof tag === 'string' ? tag : tag.name}
-                        </button>
-                      {/each}
-                    </div>
-                  {/if}
                 </div>
+              </td>
+              <td class="px-4">
+                {#if relic.tags && relic.tags.length > 0}
+                  <div class="flex items-center flex-wrap gap-1">
+                    {#each relic.tags as tag}
+                      <button
+                        on:click|stopPropagation={() => dispatch('tag-click', typeof tag === 'string' ? tag : tag.name)}
+                        class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
+                      >
+                        <i class="fas fa-tag mr-1 text-[8px] opacity-60"></i>
+                        {typeof tag === 'string' ? tag : tag.name}
+                      </button>
+                    {/each}
+                  </div>
+                {/if}
               </td>
               <td class="text-gray-500 text-xs">
                 {formatTimeAgo(getDateField(relic))}
