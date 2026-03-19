@@ -425,7 +425,8 @@ async def admin_restore_backup(
     logger.warning(f"Admin restore initiated: {filename}")
     try:
         result = await perform_restore(filename, engine)
-        return {"success": True, "message": result['message'], "filename": filename}
+        return {"success": True, "message": result['message'], "filename": filename,
+                "log": result.get('log', ''), "stdout": result.get('stdout', ''), "stderr": result.get('stderr', '')}
     except Exception as e:
         logger.error(f"Restore failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -462,7 +463,8 @@ async def admin_restore_from_upload(
     logger.warning(f"Admin restore from upload initiated: {file.filename} ({len(compressed):,} bytes)")
     try:
         result = await perform_restore_upload(compressed, file.filename, engine)
-        return {"success": True, "message": result['message'], "filename": file.filename}
+        return {"success": True, "message": result['message'], "filename": file.filename,
+                "log": result.get('log', ''), "stdout": result.get('stdout', ''), "stderr": result.get('stderr', '')}
     except Exception as e:
         logger.error(f"Restore from upload failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

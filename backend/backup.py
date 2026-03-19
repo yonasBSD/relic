@@ -14,6 +14,9 @@ import logging
 import gzip
 import asyncio
 import re
+import time
+import tempfile
+import os
 from datetime import datetime
 from typing import List, Dict
 from urllib.parse import urlparse
@@ -98,22 +101,45 @@ async def perform_backup(backup_type: str = 'scheduled') -> bool:
     return False
 
 
-async def _run_restore(sql_bytes: bytes, engine, label: str) -> None:
+async def _run_restore(sql_bytes: bytes, engine, label: str) -> dict:
     """
     Core restore: terminate active connections, dispose pool, run psql.
 
-    Args:
-        sql_bytes: Decompressed SQL dump content
-        engine: SQLAlchemy engine (pool will be disposed after termination)
-        label: Human-readable label for logging (filename or 'upload')
+    Returns:
+        Dict with returncode, stdout, stderr, and detailed log lines from each phase
     """
     db_info = parse_database_url(settings.DATABASE_URL)
+    log_lines = []
+    t_start = time.monotonic()
 
-    logger.info(f"Terminating active connections for restore: {label}")
+    def log(msg: str):
+        logger.info(msg)
+        log_lines.append(msg)
+
+    # ===== Phase 1: Initialization =====
+    log(f"\n{'='*60}")
+    log(f"[Phase 1] RESTORE INITIALIZATION")
+    log(f"{'='*60}")
+    log(f"Source: {label}")
+    log(f"Target: {db_info['user']}@{db_info['host']}:{db_info['port']}/{db_info['database']}")
+    log(f"Raw SQL size: {len(sql_bytes):,} bytes")
+
+    # Count SQL statements
+    sql_text_preview = sql_bytes.decode(errors='replace')
+    stmt_count = sql_text_preview.count(';')
+    log(f"Approximate statements: {stmt_count}")
+
+    # ===== Phase 2: Connection Termination =====
+    log(f"\n{'='*60}")
+    log(f"[Phase 2] TERMINATE ACTIVE CONNECTIONS")
+    log(f"{'='*60}")
+    log(f"Querying pg_stat_activity for database: {db_info['database']}")
+
     with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
-        conn.execute(
+        # Get details of active connections before terminating
+        result = conn.execute(
             text("""
-                SELECT pg_terminate_backend(pid)
+                SELECT pid, usename, application_name, state, query_start
                 FROM pg_stat_activity
                 WHERE datname = :dbname
                   AND pid <> pg_backend_pid()
@@ -121,27 +147,198 @@ async def _run_restore(sql_bytes: bytes, engine, label: str) -> None:
             """),
             {"dbname": db_info['database']}
         )
-    engine.dispose()
+        active_conns = result.fetchall()
+        log(f"Found {len(active_conns)} active connection(s):")
+        for pid, user, app, state, query_start in active_conns:
+            log(f"  - PID {pid}: {user}@{app} [{state}]")
 
-    process = await asyncio.create_subprocess_exec(
-        'psql',
-        '-h', db_info['host'],
-        '-p', str(db_info['port']),
-        '-U', db_info['user'],
-        '-d', db_info['database'],
-        stdin=asyncio.subprocess.PIPE,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-        env={'PGPASSWORD': db_info['password']}
+        # Now terminate
+        result = conn.execute(
+            text("""
+                SELECT count(*) FROM (
+                    SELECT pg_terminate_backend(pid)
+                    FROM pg_stat_activity
+                    WHERE datname = :dbname
+                      AND pid <> pg_backend_pid()
+                      AND state IS NOT NULL
+                ) t
+            """),
+            {"dbname": db_info['database']}
+        )
+        terminated = result.scalar() or 0
+
+    log(f"Terminated {terminated} connection(s)")
+
+    # ===== Phase 3: Connection Pool Management =====
+    log(f"\n{'='*60}")
+    log(f"[Phase 3] CONNECTION POOL MANAGEMENT")
+    log(f"{'='*60}")
+    log(f"Disposing SQLAlchemy connection pool...")
+    engine.dispose()
+    log(f"Pool disposed successfully")
+
+    # ===== Phase 4: SQL Preprocessing & Analysis =====
+    log(f"\n{'='*60}")
+    log(f"[Phase 4] SQL PREPROCESSING & ANALYSIS")
+    log(f"{'='*60}")
+
+    # Strip incompatible parameters
+    sql_text = re.sub(
+        r'^\s*SET transaction_timeout\s*=\s*[^;]+;\s*$', '',
+        sql_bytes.decode(errors='replace'),
+        flags=re.MULTILINE
     )
-    stdout, stderr = await process.communicate(input=sql_bytes)
+    sql_bytes_cleaned = sql_text.encode()
+    stripped_size = len(sql_bytes) - len(sql_bytes_cleaned)
+
+    if stripped_size > 0:
+        log(f"Stripped incompatible parameters: {stripped_size:,} bytes")
+    log(f"Final SQL size: {len(sql_bytes_cleaned):,} bytes")
+
+    # Parse SQL structure for informational logging
+    sql_text = sql_bytes_cleaned.decode(errors='replace')
+
+    # Log the SQL statements themselves (for visibility)
+    log(f"\n[SQL STATEMENTS TO BE EXECUTED]")
+    log(f"{'-'*60}")
+    # Split by semicolon and log each statement (limit to reasonable output)
+    statements = [s.strip() for s in sql_text.split(';') if s.strip()]
+    log(f"Total statements: {len(statements)}")
+    for i, stmt in enumerate(statements[:100], 1):  # Log first 100 statements in detail
+        # Truncate very long statements
+        if len(stmt) > 300:
+            log(f"{i}. {stmt[:300]}...")
+        else:
+            log(f"{i}. {stmt}")
+    if len(statements) > 100:
+        log(f"... and {len(statements) - 100} more statements")
+    log(f"{'-'*60}\n")
+
+    # Extract CREATE TABLE statements (capture table name properly)
+    create_tables = re.findall(r'CREATE TABLE\s+(?:IF NOT EXISTS\s+)?(?:public\.)?(\w+)', sql_text, re.IGNORECASE)
+    if create_tables:
+        log(f"\nTables to be created/restored: {len(set(create_tables))}")
+        for tbl in sorted(set(create_tables)):
+            log(f"  • {tbl}")
+
+    # Extract ALTER TABLE statements (look for ADD CONSTRAINT, ADD COLUMN, etc. after table name)
+    alter_tables = re.findall(r'ALTER TABLE\s+(?:ONLY\s+)?(?:public\.)?(\w+)\s+(?:ADD|DROP|ENABLE|DISABLE|OWNER|RENAME)', sql_text, re.IGNORECASE)
+    if alter_tables:
+        log(f"\nAlterations to apply: {len(set(alter_tables))} table(s)")
+        for tbl in sorted(set(alter_tables)):
+            log(f"  • {tbl}")
+
+    # Extract COPY statements (data loading) with row counts
+    copy_stmts = re.findall(r'COPY\s+(?:public\.)?(\w+)\s*\([^)]*\)\s+FROM\s+stdin', sql_text, re.IGNORECASE)
+    if copy_stmts:
+        log(f"\nData loading: {len(copy_stmts)} COPY statement(s)")
+        for tbl in sorted(set(copy_stmts)):
+            log(f"  • {tbl}")
+
+    # Extract CREATE INDEX statements
+    create_indexes = re.findall(r'CREATE\s+(?:UNIQUE\s+)?INDEX\s+(?:IF NOT EXISTS\s+)?(\w+)\s+ON\s+(?:public\.)?(\w+)', sql_text, re.IGNORECASE)
+    if create_indexes:
+        log(f"\nIndexes to create: {len(create_indexes)}")
+        idx_by_table = {}
+        for idx_name, tbl in create_indexes:
+            if tbl not in idx_by_table:
+                idx_by_table[tbl] = []
+            idx_by_table[tbl].append(idx_name)
+        for tbl in sorted(idx_by_table.keys()):
+            log(f"  • on table {tbl}: {len(idx_by_table[tbl])} index(es)")
+
+    # Extract sequence operations
+    sequences = re.findall(r'CREATE SEQUENCE\s+(?:IF NOT EXISTS\s+)?(?:public\.)?(\w+)', sql_text, re.IGNORECASE)
+    if sequences:
+        log(f"\nSequences to create: {len(set(sequences))}")
+        for seq in sorted(set(sequences)):
+            log(f"  • {seq}")
+
+    # ===== Phase 5: psql Execution =====
+    log(f"\n{'='*60}")
+    log(f"[Phase 5] RUNNING PSQL RESTORE")
+    log(f"{'='*60}")
+
+    # Write SQL to temp file for better logging
+    with tempfile.NamedTemporaryFile(mode='wb', suffix='.sql', delete=False) as tmp:
+        tmp.write(sql_bytes_cleaned)
+        tmp_path = tmp.name
+
+    try:
+        log(f"SQL written to temp file: {tmp_path}")
+        log(f"Command: psql -h {db_info['host']} -p {db_info['port']} -U {db_info['user']} -d {db_info['database']} -f {tmp_path} --echo-all --echo-errors --set=VERBOSITY=verbose")
+        log(f"Starting psql subprocess...")
+
+        t_psql = time.monotonic()
+        process = await asyncio.create_subprocess_exec(
+            'psql',
+            '--echo-all',
+            '--echo-errors',
+            f'--set=VERBOSITY=verbose',
+            '-h', db_info['host'],
+            '-p', str(db_info['port']),
+            '-U', db_info['user'],
+            '-d', db_info['database'],
+            '-f', tmp_path,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            env={'PGPASSWORD': db_info['password']}
+        )
+
+        log(f"psql process started (PID: {process.pid})")
+        stdout, stderr = await process.communicate()
+        psql_elapsed = time.monotonic() - t_psql
+    finally:
+        # Clean up temp file
+        try:
+            os.unlink(tmp_path)
+        except Exception as e:
+            logger.warning(f"Failed to delete temp file {tmp_path}: {e}")
+
+    stdout_text = stdout.decode(errors='replace')
+    stderr_text = stderr.decode(errors='replace')
+
+    log(f"psql exited with code: {process.returncode}")
+    log(f"psql execution time: {psql_elapsed:.2f}s")
+    log(f"stdout size: {len(stdout_text):,} bytes ({len(stdout_text.splitlines())} lines)")
+    log(f"stderr size: {len(stderr_text):,} bytes ({len(stderr_text.splitlines())} lines)")
+
+    # Include full psql output in process log
+    if stdout_text:
+        log(f"\n{'-'*60}")
+        log(f"[psql STDOUT - FULL OUTPUT]")
+        log(f"{'-'*60}")
+        for line in stdout_text.splitlines():
+            log(line)
+
+    if stderr_text:
+        log(f"\n{'-'*60}")
+        log(f"[psql STDERR - FULL OUTPUT]")
+        log(f"{'-'*60}")
+        for line in stderr_text.splitlines():
+            log(line)
 
     if process.returncode != 0:
-        error_msg = stderr.decode(errors='replace')
-        logger.error(f"psql restore failed (rc={process.returncode}): {error_msg}")
-        raise RuntimeError(f"psql restore failed: {error_msg[:500]}")
+        logger.error(f"psql restore failed (rc={process.returncode}): {stderr_text}")
+        raise RuntimeError(f"psql restore failed (rc={process.returncode}):\n{stderr_text}")
 
-    logger.info(f"Database restore completed successfully: {label}")
+    # ===== Phase 6: Completion =====
+    total_elapsed = time.monotonic() - t_start
+    log(f"\n{'='*60}")
+    log(f"[Phase 6] RESTORE COMPLETE")
+    log(f"{'='*60}")
+    log(f"Total elapsed time: {total_elapsed:.2f}s")
+    log(f"Connections terminated: {terminated}")
+    log(f"SQL bytes processed: {len(sql_bytes_cleaned):,}")
+    log(f"Success: ✓")
+    log(f"{'='*60}\n")
+
+    return {
+        'returncode': process.returncode,
+        'stdout': stdout_text,
+        'stderr': stderr_text,
+        'log': '\n'.join(log_lines),
+    }
 
 
 async def perform_restore(filename: str, engine) -> dict:
@@ -159,8 +356,8 @@ async def perform_restore(filename: str, engine) -> dict:
     sql_bytes = gzip.decompress(compressed)
     logger.info(f"Decompressed {len(compressed):,} -> {len(sql_bytes):,} bytes")
 
-    await _run_restore(sql_bytes, engine, label=filename)
-    return {'success': True, 'filename': filename, 'message': 'Restore completed successfully'}
+    psql_result = await _run_restore(sql_bytes, engine, label=filename)
+    return {'success': True, 'filename': filename, 'message': 'Restore completed successfully', **psql_result}
 
 
 async def perform_restore_upload(compressed: bytes, original_filename: str, engine) -> dict:
@@ -173,8 +370,8 @@ async def perform_restore_upload(compressed: bytes, original_filename: str, engi
     sql_bytes = gzip.decompress(compressed)
     logger.info(f"Decompressed upload {original_filename}: {len(compressed):,} -> {len(sql_bytes):,} bytes")
 
-    await _run_restore(sql_bytes, engine, label=original_filename)
-    return {'success': True, 'filename': original_filename, 'message': 'Restore completed successfully'}
+    psql_result = await _run_restore(sql_bytes, engine, label=original_filename)
+    return {'success': True, 'filename': original_filename, 'message': 'Restore completed successfully', **psql_result}
 
 
 async def cleanup_old_backups() -> None:

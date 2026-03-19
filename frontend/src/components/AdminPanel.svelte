@@ -12,6 +12,7 @@
         downloadAdminBackup,
         restoreAdminBackup,
         restoreFromUpload,
+        createRelic,
         deleteRelic,
         deleteClient,
         getAdminReports,
@@ -31,6 +32,7 @@
         viewRaw,
         copyToClipboard,
     } from "../services/relicActions";
+    import { triggerDownload } from "../services/utils/download";
 
     let isAdmin = false;
     let loading = true;
@@ -79,6 +81,7 @@
     let restoreModalOpen = false;
     let restoreTarget = null;   // { source: 's3', filename, timestamp, size_bytes } | { source: 'upload', filename, size_bytes, file }
     let restoreInProgress = false;
+    let restoreLogs = null;     // { stdout, stderr } shown after restore completes
     let uploadFileInput;
 
     // Reports state
@@ -242,6 +245,7 @@
         if (restoreInProgress) return;
         restoreModalOpen = false;
         restoreTarget = null;
+        restoreLogs = null;
     }
 
     function handleUploadFileChange(event) {
@@ -257,21 +261,49 @@
         restoreModalOpen = true;
     }
 
+    function buildFullLog() {
+        if (!restoreLogs) return '';
+        const parts = [];
+        if (restoreLogs.log) parts.push('=== Process Log ===\n' + restoreLogs.log);
+        if (restoreLogs.stdout) parts.push('=== psql Output ===\n' + restoreLogs.stdout);
+        if (restoreLogs.stderr) parts.push('=== Errors / Warnings ===\n' + restoreLogs.stderr);
+        return parts.join('\n\n');
+    }
+
+    function downloadRestoreLogs() {
+        const filename = `restore-log-${restoreTarget?.filename ?? 'upload'}-${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.txt`;
+        triggerDownload(buildFullLog(), filename, 'text/plain');
+    }
+
+    async function saveRestoreLogsAsRelic() {
+        const content = buildFullLog();
+        const filename = `restore-log-${restoreTarget?.filename ?? 'upload'}-${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.txt`;
+        const file = new File([content], filename, { type: 'text/plain' });
+        try {
+            const response = await createRelic({ file, name: filename, access_level: 'restricted' });
+            const relicId = response.data.id;
+            showToast('Logs saved as restricted relic', 'success');
+            window.open(`/${relicId}`, '_blank');
+        } catch (err) {
+            showToast(err.response?.data?.detail || 'Failed to save relic', 'error');
+        }
+    }
+
     async function confirmRestore() {
         if (!restoreTarget) return;
         restoreInProgress = true;
+        restoreLogs = null;
         try {
-            if (restoreTarget.source === 'upload') {
-                await restoreFromUpload(restoreTarget.file);
-            } else {
-                await restoreAdminBackup(restoreTarget.filename);
-            }
+            const response = restoreTarget.source === 'upload'
+                ? await restoreFromUpload(restoreTarget.file)
+                : await restoreAdminBackup(restoreTarget.filename);
+            restoreLogs = { log: response.data.log || '', stdout: response.data.stdout || '', stderr: response.data.stderr || '' };
             showToast("Database restored successfully", "success");
-            restoreModalOpen = false;
-            restoreTarget = null;
             await loadBackups();
         } catch (err) {
-            showToast(err.response?.data?.detail || "Restore failed", "error");
+            const detail = err.response?.data?.detail || "Restore failed";
+            restoreLogs = { log: '', stdout: '', stderr: detail };
+            showToast(detail, "error");
         } finally {
             restoreInProgress = false;
         }
@@ -1359,62 +1391,134 @@
         <!-- svelte-ignore a11y-click-events-have-key-events -->
         <!-- svelte-ignore a11y-no-static-element-interactions -->
         <div
-            class="bg-white rounded-lg shadow-xl w-full max-w-md"
+            class="bg-white rounded-lg shadow-xl w-full {restoreLogs !== null ? 'max-w-4xl' : 'max-w-md'}"
             on:click|stopPropagation
         >
-            <div class="px-6 py-4 border-b border-red-200 bg-red-50 rounded-t-lg flex items-center gap-3">
-                <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
-                <h2 class="text-lg font-semibold text-red-900">Restore Database</h2>
-            </div>
-
-            <div class="px-6 py-5 space-y-4">
-                <div class="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-800">
-                    <p class="font-semibold mb-1">This action is irreversible.</p>
-                    <p>All current data will be permanently replaced with the contents of this backup.</p>
-                </div>
-
-                <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm">
-                    <p class="text-gray-500 text-xs uppercase tracking-wider mb-2">
-                        {restoreTarget.source === 'upload' ? 'File to restore' : 'Backup to restore'}
-                    </p>
-                    <p class="font-mono text-gray-900 break-all">{restoreTarget.filename}</p>
-                    <p class="text-gray-500 text-xs mt-1">
-                        {#if restoreTarget.source === 'upload'}
-                            Local upload &bull; {formatBytes(restoreTarget.size_bytes)}
-                        {:else}
-                            {formatDate(restoreTarget.timestamp)} &bull; {formatBytes(restoreTarget.size_bytes)}
-                        {/if}
-                    </p>
-                </div>
-
-                <p class="text-sm text-gray-600">
-                    Active database connections will be terminated. The service will remain up
-                    and new connections will reflect the restored state immediately.
-                </p>
-            </div>
-
-            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-lg flex justify-end gap-3">
-                <button
-                    type="button"
-                    on:click={closeRestoreModal}
-                    disabled={restoreInProgress}
-                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
-                >
-                    Cancel
-                </button>
-                <button
-                    type="button"
-                    on:click={confirmRestore}
-                    disabled={restoreInProgress}
-                    class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
-                >
-                    {#if restoreInProgress}
-                        <i class="fas fa-spinner fa-spin"></i>Restoring...
+            {#if restoreLogs !== null}
+                <!-- Log view: shown after restore completes -->
+                <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-lg flex items-center gap-3">
+                    {#if restoreLogs.stderr && !restoreLogs.stdout}
+                        <i class="fas fa-times-circle text-red-600 text-xl"></i>
+                        <h2 class="text-lg font-semibold text-gray-900">Restore Failed</h2>
                     {:else}
-                        <i class="fas fa-undo"></i>Restore Database
+                        <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                        <h2 class="text-lg font-semibold text-gray-900">Restore Complete</h2>
                     {/if}
-                </button>
-            </div>
+                </div>
+                <div class="px-6 py-4 space-y-3">
+                    {#if restoreLogs.log}
+                        <div>
+                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Process Log</p>
+                            <pre class="bg-gray-900 text-cyan-300 text-xs rounded p-3 overflow-auto max-h-40 whitespace-pre-wrap">{restoreLogs.log}</pre>
+                        </div>
+                    {/if}
+                    {#if restoreLogs.stdout}
+                        <div>
+                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">psql Output</p>
+                            <pre class="bg-gray-900 text-green-400 text-xs rounded p-3 overflow-auto max-h-48 whitespace-pre-wrap break-all">{restoreLogs.stdout}</pre>
+                        </div>
+                    {/if}
+                    {#if restoreLogs.stderr}
+                        <div>
+                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Errors / Warnings</p>
+                            <pre class="bg-gray-900 text-yellow-300 text-xs rounded p-3 overflow-auto max-h-48 whitespace-pre-wrap break-all">{restoreLogs.stderr}</pre>
+                        </div>
+                    {/if}
+                    {#if !restoreLogs.log && !restoreLogs.stdout && !restoreLogs.stderr}
+                        <p class="text-sm text-gray-500 italic">No output.</p>
+                    {/if}
+                </div>
+                <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-lg flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                        <button
+                            type="button"
+                            on:click={() => copyToClipboard(buildFullLog(), 'Logs copied to clipboard')}
+                            class="px-3 py-1.5 text-sm text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 flex items-center gap-1.5"
+                            title="Copy all logs to clipboard"
+                        >
+                            <i class="fas fa-copy text-xs"></i>Copy
+                        </button>
+                        <button
+                            type="button"
+                            on:click={downloadRestoreLogs}
+                            class="px-3 py-1.5 text-sm text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 flex items-center gap-1.5"
+                            title="Download logs as .txt"
+                        >
+                            <i class="fas fa-download text-xs"></i>Download
+                        </button>
+                        <button
+                            type="button"
+                            on:click={saveRestoreLogsAsRelic}
+                            class="px-3 py-1.5 text-sm text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 flex items-center gap-1.5"
+                            title="Save logs as a restricted relic"
+                        >
+                            <i class="fas fa-lock text-xs"></i>Save as relic
+                        </button>
+                    </div>
+                    <button
+                        type="button"
+                        on:click={closeRestoreModal}
+                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                    >
+                        Close
+                    </button>
+                </div>
+            {:else}
+                <!-- Confirmation view -->
+                <div class="px-6 py-4 border-b border-red-200 bg-red-50 rounded-t-lg flex items-center gap-3">
+                    <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+                    <h2 class="text-lg font-semibold text-red-900">Restore Database</h2>
+                </div>
+
+                <div class="px-6 py-5 space-y-4">
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-800">
+                        <p class="font-semibold mb-1">This action is irreversible.</p>
+                        <p>All current data will be permanently replaced with the contents of this backup.</p>
+                    </div>
+
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm">
+                        <p class="text-gray-500 text-xs uppercase tracking-wider mb-2">
+                            {restoreTarget.source === 'upload' ? 'File to restore' : 'Backup to restore'}
+                        </p>
+                        <p class="font-mono text-gray-900 break-all">{restoreTarget.filename}</p>
+                        <p class="text-gray-500 text-xs mt-1">
+                            {#if restoreTarget.source === 'upload'}
+                                Local upload &bull; {formatBytes(restoreTarget.size_bytes)}
+                            {:else}
+                                {formatDate(restoreTarget.timestamp)} &bull; {formatBytes(restoreTarget.size_bytes)}
+                            {/if}
+                        </p>
+                    </div>
+
+                    <p class="text-sm text-gray-600">
+                        Active database connections will be terminated. The service will remain up
+                        and new connections will reflect the restored state immediately.
+                    </p>
+                </div>
+
+                <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-lg flex justify-end gap-3">
+                    <button
+                        type="button"
+                        on:click={closeRestoreModal}
+                        disabled={restoreInProgress}
+                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        on:click={confirmRestore}
+                        disabled={restoreInProgress}
+                        class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
+                    >
+                        {#if restoreInProgress}
+                            <i class="fas fa-spinner fa-spin"></i>Restoring...
+                        {:else}
+                            <i class="fas fa-undo"></i>Restore Database
+                        {/if}
+                    </button>
+                </div>
+            {/if}
         </div>
     </div>
 {/if}
