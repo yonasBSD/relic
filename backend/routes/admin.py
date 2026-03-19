@@ -10,7 +10,7 @@ from typing import Optional
 
 from backend.config import settings
 from backend.database import get_db
-from backend.models import Relic, ClientKey, ClientBookmark, RelicReport
+from backend.models import Relic, ClientKey, ClientBookmark, RelicReport, Comment
 from backend.storage import storage_service
 from backend.dependencies import get_client_key, get_admin_client, is_admin_client
 
@@ -59,6 +59,25 @@ async def admin_list_all_relics(
     total = query.count()
     relics = query.order_by(Relic.created_at.desc()).offset(offset).limit(limit).all()
 
+    # Fetch all counts in bulk (2 queries instead of N*2)
+    relic_ids = [r.id for r in relics]
+    comments_counts = {}
+    forks_counts = {}
+
+    if relic_ids:
+        comments_counts = {
+            row[0]: row[1]
+            for row in db.query(Comment.relic_id, func.count(Comment.id)).filter(
+                Comment.relic_id.in_(relic_ids)
+            ).group_by(Comment.relic_id).all()
+        }
+        forks_counts = {
+            row[0]: row[1]
+            for row in db.query(Relic.fork_of, func.count(Relic.id)).filter(
+                Relic.fork_of.in_(relic_ids)
+            ).group_by(Relic.fork_of).all()
+        }
+
     return {
         "total": total,
         "limit": limit,
@@ -74,6 +93,8 @@ async def admin_list_all_relics(
                 "access_level": r.access_level,
                 "access_count": r.access_count,
                 "bookmark_count": r.bookmark_count,
+                "comments_count": comments_counts.get(r.id, 0),
+                "forks_count": forks_counts.get(r.id, 0),
                 "created_at": r.created_at,
                 "expires_at": r.expires_at,
                 "tags": [{"id": t.id, "name": t.name} for t in r.tags]
