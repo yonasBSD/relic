@@ -444,11 +444,11 @@ async def delete_relic(relic_id: str, request: Request, db: Session = Depends(ge
 
 @router.get("/api/v1/relics", response_model=RelicListResponse)
 async def list_relics(
-    limit: int = 1000,
+    limit: int = 200,
     tag: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    """List the 1000 most recent public relics."""
+    """List the most recent public relics."""
     query = db.query(Relic).options(selectinload(Relic.tags)).filter(Relic.access_level == "public")
 
     if tag:
@@ -456,21 +456,34 @@ async def list_relics(
         if tag_obj:
             query = query.filter(Relic.tags.contains(tag_obj))
         else:
-            # If tag doesn't exist, return empty list
             return {"relics": []}
 
     relics = query.order_by(Relic.created_at.desc()).limit(limit).all()
 
-    # Add comments_count and forks_count to each relic using SQL COUNT
+    # Fetch all counts in bulk (2 queries instead of N*2)
+    relic_ids = [r.id for r in relics]
+    comments_counts = {}
+    forks_counts = {}
+
+    if relic_ids:
+        comments_counts = {
+            row[0]: row[1]
+            for row in db.query(Comment.relic_id, func.count(Comment.id)).filter(
+                Comment.relic_id.in_(relic_ids)
+            ).group_by(Comment.relic_id).all()
+        }
+        forks_counts = {
+            row[0]: row[1]
+            for row in db.query(Relic.fork_of, func.count(Relic.id)).filter(
+                Relic.fork_of.in_(relic_ids)
+            ).group_by(Relic.fork_of).all()
+        }
+
     relic_responses = []
     for relic in relics:
-        comments_count = db.query(func.count(Comment.id)).filter(Comment.relic_id == relic.id).scalar()
-        forks_count = db.query(func.count(Relic.id)).filter(Relic.fork_of == relic.id).scalar()
         relic_response = RelicResponse.from_orm(relic)
-        relic_response.comments_count = comments_count or 0
-        relic_response.forks_count = forks_count or 0
+        relic_response.comments_count = comments_counts.get(relic.id, 0)
+        relic_response.forks_count = forks_counts.get(relic.id, 0)
         relic_responses.append(relic_response)
 
-    return {
-        "relics": relic_responses
-    }
+    return {"relics": relic_responses}
