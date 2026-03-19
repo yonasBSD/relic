@@ -4,7 +4,9 @@
     import { showToast } from '../stores/toastStore';
     import { getTypeLabel, getDefaultItemsPerPage } from '../services/typeUtils';
     import { filterRelics, sortData, calculateTotalPages, paginateData, clampPage } from '../services/utils/paginationUtils';
+    import { getFilesFromDrop } from '../services/utils/fileProcessing';
     import RelicTable from './RelicTable.svelte';
+    import RelicDropModal from './RelicDropModal.svelte';
 
     export let spaceId;
     export let tagFilter = null;
@@ -42,6 +44,11 @@
     let itemsPerPage = 20;
     let sortBy = 'date';
     let sortOrder = 'desc';
+
+    // Drop handling state
+    let showDropModal = false;
+    let droppedFiles = [];
+    let isDraggingOver = false;
 
     $: canEdit = space?.role === 'owner' || space?.role === 'editor' || space?.role === 'admin';
     $: isOwner = space?.role === 'owner' || space?.role === 'admin';
@@ -263,6 +270,40 @@
         dispatch('navigate', { path: relicId });
     }
 
+    function handleDragOver(e) {
+        e.preventDefault();
+        if (!canEdit) return;
+        isDraggingOver = true;
+    }
+
+    function handleDragLeave(e) {
+        e.preventDefault();
+        isDraggingOver = false;
+    }
+
+    async function handleDrop(e) {
+        e.preventDefault();
+        isDraggingOver = false;
+        
+        if (!canEdit) {
+            showToast("You don't have permission to add relics to this space", "error");
+            return;
+        }
+
+        const files = await getFilesFromDrop(e.dataTransfer);
+        if (files.length > 0) {
+            droppedFiles = files;
+            showDropModal = true;
+        }
+    }
+
+    function handleUploadSuccess() {
+        showDropModal = false;
+        loadRelics(); // Refresh list
+        // Update space count
+        loadSpace();
+    }
+
     onMount(() => {
         itemsPerPage = getDefaultItemsPerPage();
         loadSpace();
@@ -274,7 +315,23 @@
         <i class="fas fa-spinner fa-spin text-3xl text-gray-400"></i>
     </div>
 {:else if space}
-    <div class="space-y-6">
+    <div 
+        class="space-y-6 relative min-h-[400px]"
+        on:dragover={handleDragOver}
+        on:dragleave={handleDragLeave}
+        on:drop={handleDrop}
+        role="region"
+        aria-label="Space Content and Drop Zone"
+    >
+        {#if isDraggingOver}
+            <div class="absolute inset-0 z-[100] bg-blue-50/80 backdrop-blur-[2px] border-4 border-dashed border-blue-400 rounded-lg flex flex-col items-center justify-center animate-in fade-in duration-200">
+                <div class="w-20 h-20 bg-white rounded-full shadow-xl flex items-center justify-center text-blue-500 mb-6 border-4 border-blue-100">
+                    <i class="fas fa-cloud-upload-alt text-4xl animate-bounce"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-blue-700">Drop files to upload</h3>
+                <p class="text-blue-500 font-medium mt-2">Uploading directly to {space.name}</p>
+            </div>
+        {/if}
         <div class="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
             <!-- Space Header -->
             <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
@@ -502,6 +559,16 @@
             <p class="text-sm text-gray-500">Something went wrong. Please try again.</p>
         </div>
     </div>
+{/if}
+
+{#if showDropModal}
+    <RelicDropModal
+        files={droppedFiles}
+        spaceId={spaceId}
+        spaceName={space.name}
+        on:close={() => showDropModal = false}
+        on:success={handleUploadSuccess}
+    />
 {/if}
 
 <!-- Edit Space Modal -->

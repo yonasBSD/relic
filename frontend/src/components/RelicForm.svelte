@@ -11,6 +11,7 @@
     getFileTypeDefinition,
   } from "../services/typeUtils";
   import { formatBytes } from "../services/utils/formatting";
+  import { getFilesFromDrop } from "../services/utils/fileProcessing";
 
   export let spaceId = null;
 
@@ -33,21 +34,6 @@
   // Get current server URL
   const serverUrl = window.location.origin;
 
-  // Configuration
-  const MAX_BATCH_SIZE = 10;
-  const IGNORED_NAMES = [
-    ".git",
-    "node_modules",
-    ".DS_Store",
-    "__pycache__",
-    ".idea",
-    ".vscode",
-    "dist",
-    "build",
-    "coverage",
-    "venv",
-    ".env",
-  ];
 
   // Update syntax when syntaxValue changes
   $: syntax = syntaxValue?.value || "auto";
@@ -104,38 +90,6 @@
     }
   }
 
-  // Recursive function to traverse file system entries
-  async function traverseFileTree(item, path = "") {
-    if (IGNORED_NAMES.includes(item.name)) {
-      return [];
-    }
-
-    if (item.isFile) {
-      return new Promise((resolve) => {
-        item.file((file) => {
-          // Double check file name for ignore list (though item.name caught dirs)
-          if (IGNORED_NAMES.includes(file.name)) {
-            resolve([]);
-          } else {
-            resolve([{ file, path: path + file.name }]);
-          }
-        });
-      });
-    } else if (item.isDirectory) {
-      const dirReader = item.createReader();
-      const entries = await new Promise((resolve) => {
-        dirReader.readEntries((entries) => resolve(entries));
-      });
-
-      let files = [];
-      for (const entry of entries) {
-        const children = await traverseFileTree(entry, path + item.name + "/");
-        files = [...files, ...children];
-      }
-      return files;
-    }
-    return [];
-  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -146,6 +100,7 @@
     }
 
     // Check batch limit if not zipping
+    const MAX_BATCH_SIZE = 100;
     if (uploadedFiles.length > MAX_BATCH_SIZE && !zipMultiple) {
       showToast(
         `Batch creation is limited to ${MAX_BATCH_SIZE} files. Please use the Zip option or reduce the number of files.`,
@@ -347,43 +302,9 @@
     e.preventDefault();
     e.currentTarget.classList.remove("border-blue-500", "bg-blue-50");
 
-    const dt = e.dataTransfer;
-    if (!dt) return;
-
-    if (dt.items && dt.items.length > 0) {
-      // Important: Collect all items/entries synchronously because dt.items
-      // can be cleared once we start awaiting in the loop.
-      const entriesToProcess = [];
-      for (let i = 0; i < dt.items.length; i++) {
-        const item = dt.items[i];
-        if (item.webkitGetAsEntry) {
-          const entry = item.webkitGetAsEntry();
-          if (entry) entriesToProcess.push({ entry });
-        } else if (item.kind === "file") {
-          const file = item.getAsFile();
-          if (file) entriesToProcess.push({ file });
-        }
-      }
-
-      let allFiles = [];
-      for (const { entry, file } of entriesToProcess) {
-        if (entry) {
-          const files = await traverseFileTree(entry);
-          allFiles = [...allFiles, ...files];
-        } else if (file) {
-          allFiles.push({ file, path: file.name });
-        }
-      }
-
-      if (allFiles.length > 0) {
-        processFiles(allFiles, "dropped_recursive");
-      }
-    } else {
-      // Fallback for older browsers
-      const files = dt.files;
-      if (files && files.length > 0) {
-        processFiles(files, "dropped");
-      }
+    const droppedFiles = await getFilesFromDrop(e.dataTransfer);
+    if (droppedFiles.length > 0) {
+      processFiles(droppedFiles, "dropped_recursive");
     }
   }
 

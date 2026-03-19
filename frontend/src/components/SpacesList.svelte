@@ -2,6 +2,8 @@
     import { onMount, createEventDispatcher } from 'svelte';
     import { spaces as spacesApi } from '../services/api';
     import { showToast } from '../stores/toastStore';
+    import { getFilesFromDrop } from '../services/utils/fileProcessing';
+    import RelicDropModal from './RelicDropModal.svelte';
 
     const dispatch = createEventDispatcher();
 
@@ -16,6 +18,12 @@
     let searchTerm = '';
     let sortBy = 'created_at';
     let sortOrder = 'desc';
+
+    // Drop handling state
+    let showDropModal = false;
+    let droppedFiles = [];
+    let dropTargetSpace = null;
+    let dragOverSpaceId = null;
 
     $: filteredSpaces = spaces.filter(space => {
         // Apply category filter
@@ -115,6 +123,38 @@
         navigator.clipboard.writeText(text).then(() => {
             showToast(message, "success");
         });
+    }
+
+    function handleDragOver(e, spaceId) {
+        e.preventDefault();
+        dragOverSpaceId = spaceId;
+    }
+
+    function handleDragLeave(e) {
+        dragOverSpaceId = null;
+    }
+
+    async function handleDrop(e, space) {
+        e.preventDefault();
+        dragOverSpaceId = null;
+        
+        // Don't allow drop if user doesn't have edit permissions
+        if (space.role === 'viewer') {
+            showToast("You don't have permission to add relics to this space", "error");
+            return;
+        }
+
+        const files = await getFilesFromDrop(e.dataTransfer);
+        if (files.length > 0) {
+            droppedFiles = files;
+            dropTargetSpace = space;
+            showDropModal = true;
+        }
+    }
+
+    function handleUploadSuccess() {
+        showDropModal = false;
+        loadSpaces(); // Refresh counts
     }
 
     onMount(() => {
@@ -245,7 +285,13 @@
                     </thead>
                     <tbody class="divide-y divide-gray-100">
                         {#each sortedSpaces as space (space.id)}
-                            <tr class="hover:bg-blue-50/30 transition-colors group cursor-pointer" on:click={() => openSpace(space.id)}>
+                            <tr 
+                                class="hover:bg-blue-50/30 transition-colors group cursor-pointer {dragOverSpaceId === space.id ? 'bg-blue-50 ring-2 ring-inset ring-blue-500 z-10' : ''}" 
+                                on:click={() => openSpace(space.id)}
+                                on:dragover={(e) => handleDragOver(e, space.id)}
+                                on:dragleave={handleDragLeave}
+                                on:drop={(e) => handleDrop(e, space)}
+                            >
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-3">
                                         <div class="w-8 h-8 rounded bg-gray-100 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-100 transition-colors">
@@ -339,6 +385,16 @@
         {/if}
     </div>
 </div>
+
+{#if showDropModal}
+    <RelicDropModal
+        files={droppedFiles}
+        spaceId={dropTargetSpace?.id}
+        spaceName={dropTargetSpace?.name}
+        on:close={() => showDropModal = false}
+        on:success={handleUploadSuccess}
+    />
+{/if}
 
 <style>
     .sort-arrow {
