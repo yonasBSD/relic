@@ -6,6 +6,7 @@ from sqlalchemy import func
 from datetime import datetime
 from typing import Optional, List
 import logging
+import urllib.parse
 
 from backend.config import settings
 from backend.database import get_db
@@ -209,7 +210,9 @@ async def get_relic_raw(relic_id: str, request: Request, db: Session = Depends(g
         return StreamingResponse(
             iter([content]),
             media_type=relic.content_type,
-            headers={"Content-Disposition": f"inline; filename={relic.name or relic.id}"}
+            headers={"Content-Disposition": "inline; filename*=UTF-8''{filename}".format(
+                filename=urllib.parse.quote(relic.name or relic.id, safe="")
+            )}
         )
     except Exception as e:
         logger.error(f"Operation failed: {e}")
