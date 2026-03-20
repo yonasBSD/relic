@@ -171,15 +171,15 @@
                   {#if tableId !== 'recent-relics'}
                     <div class="flex items-center gap-0.5 flex-shrink-0">
                       {#if relic.access_level === 'private'}
-                        <i class="fas fa-lock text-xs" style="color: #76306c;" title="Private - accessible only via URL"></i>
+                        <i class="fas fa-lock text-xs translate-y-[1px]" style="color: #76306c;" title="Private - accessible only via URL"></i>
                       {:else if relic.access_level === 'restricted'}
-                        <i class="fas fa-user-lock text-xs" style="color: #b45309;" title="Restricted - allowlist only"></i>
+                        <i class="fas fa-user-lock text-xs translate-y-[1px]" style="color: #b45309;" title="Restricted - allowlist only"></i>
                       {:else if relic.access_level === 'public'}
-                        <i class="fas fa-globe text-xs" style="color: #217db1;" title="Public - discoverable"></i>
+                        <i class="fas fa-globe text-xs translate-y-[1px]" style="color: #217db1;" title="Public - discoverable"></i>
                       {/if}
                     </div>
                   {/if}
-                  <i class="fas {getTypeIcon(relic.content_type)} {getTypeIconColor(relic.content_type)} text-sm flex-shrink-0" title={getTypeLabel(relic.content_type)}></i>
+                  <i class="fas {getTypeIcon(relic.content_type)} {getTypeIconColor(relic.content_type)} text-sm flex-shrink-0 translate-y-[1px]" title={getTypeLabel(relic.content_type)}></i>
                   <a href="/{relic.id}" class="font-medium text-[#0066cc] hover:underline truncate">
                     {relic.name || 'Untitled'}
                   </a>
