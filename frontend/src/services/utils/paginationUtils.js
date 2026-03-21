@@ -6,7 +6,7 @@ export function filterRelics(relics, searchTerm, getTypeLabel, tagFilter = null)
     // If a tagFilter is configured, reject any relic that doesn't include it.
     if (tagFilter) {
       if (!relic.tags) return false;
-      const hasTag = relic.tags.some(tag => (typeof tag === 'string' ? tag : tag.name) === tagFilter);
+      const hasTag = relic.tags.some(tag => (typeof tag === 'string' ? tag : tag.name).toLowerCase() === tagFilter.toLowerCase());
       if (!hasTag) return false;
     }
 

@@ -24,7 +24,9 @@
   let isDraggingOver = false
 
   // Use shared filter utility
-  $: filteredRelics = filterRelics(relics, searchTerm, getTypeLabel)
+  $: filteredRelics = filterRelics(relics, searchTerm, getTypeLabel, tagFilter)
+  
+  $: searchTerm, tagFilter, (currentPage = 1)
   
   // Apply sorting
   $: sortedRelics = sortData(filteredRelics, sortBy, sortOrder)
@@ -42,7 +44,6 @@
       loading = true
       const response = await listRelics(1000, tagFilter)
       relics = response.data.relics || []
-      currentPage = 1
     } catch (error) {
       showToast('Failed to load recent relics', 'error')
       console.error('Error loading relics:', error)

@@ -20,11 +20,9 @@
   let bookmarkToRemove = null
 
   // Use shared filter utility
-  $: filteredBookmarks = filterRelics(bookmarks, searchTerm, getTypeLabel)
-  // Apply tag filter if present
-  $: filteredByTag = tagFilter 
-    ? filteredBookmarks.filter(b => b.tags && b.tags.some(t => (typeof t === 'string' ? t : t.name).toLowerCase() === tagFilter.toLowerCase()))
-    : filteredBookmarks
+  $: filteredByTag = filterRelics(bookmarks, searchTerm, getTypeLabel, tagFilter)
+
+  $: searchTerm, tagFilter, (currentPage = 1)
 
   // Apply sorting
   $: sortedBookmarks = sortData(filteredByTag, sortBy, sortOrder)

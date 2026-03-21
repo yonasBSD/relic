@@ -27,7 +27,9 @@
   let isDraggingOver = false
 
   // Use the shared filter utility
-  $: filteredRelics = filterRelics(relics, searchTerm, getTypeLabel)
+  $: filteredRelics = filterRelics(relics, searchTerm, getTypeLabel, tagFilter)
+
+  $: searchTerm, tagFilter, (currentPage = 1)
 
   // Apply sorting
   $: sortedRelics = sortData(filteredRelics, sortBy, sortOrder)

@@ -58,6 +58,8 @@
     $: sortedRelics = sortData(filteredRelics, sortBy, sortOrder);
     $: totalPages = calculateTotalPages(sortedRelics, itemsPerPage);
     $: paginatedRelics = paginateData(sortedRelics, currentPage, itemsPerPage);
+    
+    $: searchTerm, tagFilter, (currentPage = 1);
 
     function goToPage(page) {
         currentPage = clampPage(page, totalPages);
