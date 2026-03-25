@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     BACKUP_ON_STARTUP: bool = os.getenv("BACKUP_ON_STARTUP", "true").lower() == "true"
     BACKUP_ON_SHUTDOWN: bool = os.getenv("BACKUP_ON_SHUTDOWN", "true").lower() == "true"
 
+    # Profiling
+    PROFILING_ENABLED: bool = os.getenv("PROFILING_ENABLED", "false").lower() == "true"
+
     # Admin Configuration
     RELIC_CLEANUP_INTERVAL: int = int(os.getenv("RELIC_CLEANUP_INTERVAL", "60"))  # Minutes
     ADMIN_CLIENT_IDS: str = os.getenv("ADMIN_CLIENT_IDS", "")
