@@ -1,6 +1,7 @@
 """Space endpoints."""
 from fastapi import APIRouter, Request, Depends, HTTPException
 from sqlalchemy import func, or_, and_, case
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session, selectinload, joinedload, contains_eager
 from datetime import datetime
 from typing import Optional, List
@@ -436,9 +437,8 @@ async def add_relic_to_space(
         if relic.client_id != client_id and not is_admin:
             raise HTTPException(status_code=403, detail="Not authorized to access this relic")
 
-    if relic not in space.relics:
-        space.relics.append(relic)
-        db.commit()
+    db.execute(pg_insert(space_relics).values(space_id=space_id, relic_id=relic_id).on_conflict_do_nothing())
+    db.commit()
 
     return {"message": "Relic added to space successfully"}
 

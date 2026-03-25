@@ -3,6 +3,7 @@ from fastapi import APIRouter, Request, Depends, UploadFile, File, Form, HTTPExc
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session, selectinload, joinedload, contains_eager
 from sqlalchemy import func, or_
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from datetime import datetime
 from typing import Optional, List
 import logging
@@ -10,7 +11,7 @@ import urllib.parse
 
 from backend.config import settings
 from backend.database import get_db
-from backend.models import Relic, ClientKey, Tag, Space, Comment, RelicAccess
+from backend.models import Relic, ClientKey, Tag, Space, Comment, RelicAccess, space_relics
 from backend.schemas import RelicResponse, RelicListResponse, RelicUpdate, RelicAccessAdd, RelicAccessEntry
 from backend.storage import storage_service
 from backend.utils import parse_expiry_string, is_expired, hash_password, get_fork_count, get_fork_counts, clamp_limit, like_term, apply_relic_search, relic_sort_order
@@ -20,6 +21,7 @@ from backend.dependencies import (
 )
 
 logger = logging.getLogger(__name__)
+
 
 router = APIRouter()
 
@@ -112,7 +114,8 @@ async def create_relic(
         if space_id:
             space = db.query(Space).filter(Space.id == space_id).first()
             if space and client and check_space_access(space, client.id, "editor"):
-                space.relics.append(relic)
+                db.flush()
+                db.execute(pg_insert(space_relics).values(space_id=space.id, relic_id=relic.id).on_conflict_do_nothing())
 
         db.commit()
         db.refresh(relic)
